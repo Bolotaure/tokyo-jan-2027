@@ -1,0 +1,28 @@
+{
+  "id": "tokyo-jan-2027",
+  "title": "Event map",
+  "kicker": "5–11 JANUARY 2027",
+  "places": {
+    "tokyo": {"label": "Tokyo"},
+    "yokohama": {"label": "Yokohama"},
+    "kamakura": {"label": "Kamakura"},
+    "chiba": {"label": "Chiba"}
+  },
+  "days": [
+    {"iso": "2027-01-05", "label": "Tue 5"},
+    {"iso": "2027-01-06", "label": "Wed 6"},
+    {"iso": "2027-01-07", "label": "Thu 7"},
+    {"iso": "2027-01-08", "label": "Fri 8"},
+    {"iso": "2027-01-09", "label": "Sat 9"},
+    {"iso": "2027-01-10", "label": "Sun 10"},
+    {"iso": "2027-01-11", "label": "Mon 11"}
+  ],
+  "sources": [
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ca6a7d38c384ee979f38f8488b698964f034df23/events-a.json",
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@2416116f03ead9dec70aa8826bbbcbc05c2e879f/events-b.json",
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@5d1b51e54ece2b206eab48b4c8325684c76d33f5/events-c.json",
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ee1b688679a3c09461f93ed4feb49625d2486f39/events-d.json",
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@97bf4891d6f5d5c3868d4183ecc96345a503d617/events-e.json",
+    "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@fb31ab01d19b98ebdb9dc2146905dc611f299122/events-f.json"
+  ]
+}

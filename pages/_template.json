@@ -1,0 +1,9 @@
+{
+  "id": "example-city-dates",
+  "title": "Event map",
+  "kicker": "DATES HERE",
+  "places": {"city": {"label": "City"}},
+  "days": [{"iso": "2027-01-01", "label": "Fri 1"}],
+  "events": [],
+  "sources": []
+}
