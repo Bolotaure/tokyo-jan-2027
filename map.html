@@ -21,9 +21,9 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list .meta,#list .desc{font-size:12px;color:var(--muted)}
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc{display:block}
-#mapwrap{position:relative;height:44vh;min-height:230px;border-top:1px solid var(--line);background:#cfe0d4;touch-action:none}
+#mapwrap{position:relative;height:44vh;min-height:230px;border-top:1px solid var(--line);background:#cfe0d4;touch-action:none;overflow:hidden}
 #mapframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
-#pins{position:absolute;inset:0}
+#pins{position:absolute;left:0;right:0;top:0;bottom:28px}
 #pins span{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
 #pins span.on{width:16px;height:16px;z-index:2}
 .zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:3}
@@ -58,6 +58,31 @@ let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), activeName=null,
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
 const frame=document.getElementById("mapframe");
+const wrap=document.getElementById("mapwrap");
+function mercY(lat){const r=lat*Math.PI/180;return Math.log(Math.tan(Math.PI/4+r/2))}
+function invMerc(y){return (2*Math.atan(Math.exp(y))-Math.PI/2)*180/Math.PI}
+function visibleBox(){
+  const w=wrap.clientWidth||320;
+  const h=Math.max((wrap.clientHeight||240)-28,120);
+  const aspect=w/h;
+  let x0=W, x1=E, y0=mercY(S), y1=mercY(N);
+  const boxA=(x1-x0)/Math.max(y1-y0,1e-9);
+  if(aspect>boxA){
+    const extra=(aspect*(y1-y0)-(x1-x0))/2;
+    x0-=extra; x1+=extra;
+  } else {
+    const extra=((x1-x0)/aspect-(y1-y0))/2;
+    y0-=extra; y1+=extra;
+  }
+  return {x0,x1,y0,y1};
+}
+function xy(e){
+  const v=visibleBox();
+  return {
+    left:((e.lng-v.x0)/(v.x1-v.x0)*100)+"%",
+    top:((v.y1-mercY(e.lat))/(v.y1-v.y0)*100)+"%"
+  };
+}
 function addCat(key,label,color){
   const b=document.createElement("button"); b.textContent=label;
   if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
@@ -84,14 +109,14 @@ function syncDates(){paint(document.getElementById("allDates"),selected.size===D
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
 function applyView(){
   frame.src="https://www.openstreetmap.org/export/embed.html?bbox="+W+","+S+","+E+","+N+"&layer=mapnik";
-  placePins();
 }
+frame.addEventListener("load",placePins);
 function fit(points){
   if(!points.length) return;
   let minLat=points[0].lat, maxLat=points[0].lat, minLng=points[0].lng, maxLng=points[0].lng;
   points.forEach(p=>{minLat=Math.min(minLat,p.lat);maxLat=Math.max(maxLat,p.lat);minLng=Math.min(minLng,p.lng);maxLng=Math.max(maxLng,p.lng)});
-  let pad=Math.max((maxLat-minLat)*0.35,(maxLng-minLng)*0.35,0.03);
-  if(points.length===1) pad=0.04;
+  let pad=Math.max((maxLat-minLat)*0.28,(maxLng-minLng)*0.28,0.025);
+  if(points.length===1) pad=0.035;
   S=minLat-pad; N=maxLat+pad; W=minLng-pad; E=maxLng+pad;
   applyView();
 }
@@ -103,7 +128,6 @@ function zoomBy(factor){
   S=latC-h; N=latC+h; W=lngC-w; E=lngC+w;
   applyView();
 }
-function xy(e){return {left:((e.lng-W)/(E-W)*100)+"%", top:((N-e.lat)/(N-S)*100)+"%"}}
 function placePins(){
   const pins=document.getElementById("pins"); pins.innerHTML="";
   lastShown.forEach(e=>{
@@ -150,24 +174,21 @@ document.getElementById("zin").onclick=()=>zoomBy(0.6);
 document.getElementById("zout").onclick=()=>zoomBy(1.6);
 document.getElementById("zreset").onclick=()=>{activeName=null;render(true)};
 let pinch=0;
-const wrap=document.getElementById("mapwrap");
 wrap.addEventListener("touchstart",ev=>{
   if(ev.touches.length===2){
     const a=ev.touches[0], b=ev.touches[1];
     pinch=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
   }
 },{passive:true});
-wrap.addEventListener("touchend",ev=>{
-  if(pinch && ev.touches.length<2) pinch=0;
-},{passive:true});
 wrap.addEventListener("touchmove",ev=>{
   if(ev.touches.length===2 && pinch){
     ev.preventDefault();
     const a=ev.touches[0], b=ev.touches[1];
     const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-    if(Math.abs(d-pinch)>24){ zoomBy(d>pinch?0.7:1.4); pinch=d; }
+    if(Math.abs(d-pinch)>28){ zoomBy(d>pinch?0.72:1.38); pinch=d; }
   }
 },{passive:false});
+window.addEventListener("resize",placePins);
 syncDates();
 Promise.all([fetch(DATA_A).then(r=>r.json()),fetch(DATA_B).then(r=>r.json())])
   .then(([a,b])=>{EVENTS=a.concat(b);render(true)});
