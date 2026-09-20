@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Tokyo events map (scroll layout)</title>
+<style>
+:root{--bg:#f4efe6;--ink:#1c1915;--muted:#5c564c;--line:#e4d9c8}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:8px 12px 4px}
+.kicker{color:#c45c26;font-size:11px;letter-spacing:.12em;font-weight:700}
+.title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 4px}
+h1{margin:0;font-size:20px}
+#count{font-size:13px;color:var(--muted);white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+.lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
+button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 8px;font-size:11px}
+#list{max-height:18vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
+body.card-on #list{max-height:12vh}
+#list article{padding:8px 12px;border-bottom:1px solid var(--line)}
+#list article.active{background:#f8efe4}
+#list h3{margin:0 0 2px;font-size:14px}
+#list .meta{font-size:12px;color:var(--muted)}
+#map{height:46vh;min-height:240px;background:#cfe0d4}
+.leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
+.pinwrap,.pinhit{background:transparent}
+.pinhit{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.pin{width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:none}
+a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-map-pane{z-index:1}.leaflet-tile-pane{z-index:2}.leaflet-overlay-pane{z-index:4}.leaflet-shadow-pane{z-index:5}.leaflet-marker-pane{z-index:6}.leaflet-tooltip-pane{z-index:7}.leaflet-popup-pane{z-index:8}
+.leaflet-control{position:relative;z-index:8;pointer-events:auto}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:9;pointer-events:none}
+.leaflet-top{top:0}.leaflet-left{left:0}
+.leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
+.leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
+.leaflet-control-attribution,.leaflet-popup{display:none!important}
+#card{display:none;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 12px 10px;max-height:22vh;overflow:auto}
+#card.on{display:block}
+#card h2{margin:0 0 4px;font-size:18px;line-height:1.25}
+#card .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
+#card .desc{font-size:15px;line-height:1.45;margin:0 0 14px}
+#card .links{display:flex;flex-wrap:wrap;gap:8px}
+#card .links a{background:#f4efe6;border-radius:999px;padding:8px 12px;text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+<div class="kicker">5–11 JANUARY 2027</div>
+<div class="title"><h1>Event map</h1><span id="count"></span></div>
+<div class="row"><span class="lbl">Category</span><div id="filters"></div></div>
+<div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
+</header>
+<div id="list"></div>
+<div id="card"></div>
+<div id="map"></div>
+<script>
+const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@cd3cff93801bc4cb935c8ae5b88b8181ba2b17ea/events-a.json";
+const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@b9e98554d4c9b4636ea66fe48f352b59364fc1e9/events-b.json";
+const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
+const CAT_KEYS=Object.keys(CATS);
+const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
+let EVENTS=[], cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null;
+const filters=document.getElementById("filters");
+const dates=document.getElementById("dates");
+const card=document.getElementById("card");
+function paint(b,on,color){
+  if(!b) return;
+  b.style.background=on?(color||"#1c1915"):"#fff";
+  b.style.color=on?"#fff":"#1c1915";
+  b.style.borderColor=on?(color||"#1c1915"):"";
+}
+function syncCats(){
+  paint(document.getElementById("allCats"),cats.size===CAT_KEYS.length);
+  filters.querySelectorAll("[data-cat]").forEach(b=>paint(b,cats.has(b.dataset.cat),CATS[b.dataset.cat].color));
+}
+const allCat=document.createElement("button"); allCat.id="allCats"; allCat.textContent="All";
+allCat.onclick=()=>{cats=new Set(CAT_KEYS);syncCats();hideCard();render()};
+filters.appendChild(allCat);
+CAT_KEYS.forEach(key=>{
+  const b=document.createElement("button"); b.dataset.cat=key; b.textContent=CATS[key].label;
+  b.onclick=()=>{
+    if(cats.size===CAT_KEYS.length) cats=new Set([key]);
+    else if(cats.has(key)){cats.delete(key); if(!cats.size) cats=new Set(CAT_KEYS)}
+    else cats.add(key);
+    syncCats(); hideCard(); render();
+  };
+  filters.appendChild(b);
+});
+const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
+all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();hideCard();render()};
+dates.appendChild(all);
+DAYS.forEach(d=>{
+  const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
+  b.onclick=()=>{
+    if(selected.size===DAYS.length) selected=new Set([d.iso]);
+    else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
+    else selected.add(d.iso);
+    syncDates(); hideCard(); render();
+  };
+  dates.appendChild(b);
+});
+function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
+function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
+function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
+function linksFor(e){
+  const q=encodeURIComponent(e.name);
+  const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
+  const gmap="https://www.google.com/maps/search/?api=1&query="+e.lat+","+e.lng;
+  const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Site</a>`:"";
+  return `${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Maps</a>`;
+}
+function visibleEvents(){return EVENTS.filter(e=>cats.has(e.cat)&&overlaps(e))}
+function fitVisible(){
+  if(!map) return;
+  const shown=visibleEvents();
+  if(!shown.length) return;
+  map.invalidateSize();
+  map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.2));
+}
+function hideCard(){
+  current=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
+  document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
+  fitVisible();
+}
+function showCard(e, art){
+  if(current===e.name){hideCard();return}
+  current=e.name;
+  document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
+  if(art){art.classList.add("active"); art.scrollIntoView({block:"nearest"})}
+  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${(e.desc||"").replace(/\n+/g," ")}</p><div class="links">${linksFor(e)}</div>`;
+  card.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
+  card.classList.add("on"); document.body.classList.add("card-on");
+  if(map){map.invalidateSize(); map.setView([e.lat,e.lng],14,{animate:true});}
+}
+card.addEventListener("click",ev=>{if(ev.target.closest("a")) return; hideCard()});
+function render(){
+  if(!layer) return;
+  layer.clearLayers();
+  const list=document.getElementById("list"); list.innerHTML="";
+  const shown=visibleEvents();
+  document.getElementById("count").textContent=shown.length+" places";
+  shown.forEach(e=>{
+    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color),riseOnHover:true,keyboard:true}).addTo(layer);
+    const art=document.createElement("article");
+    if(current===e.name) art.className="active";
+    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div>`;
+    art.onclick=()=>showCard(e,art);
+    m.on("click",ev=>{L.DomEvent.stopPropagation(ev); showCard(e,art);});
+    list.appendChild(art);
+  });
+  if(shown.length) fitVisible();
+}
+function startMap(){
+  map=L.map("map",{tap:true,tapTolerance:28,bounceAtZoomLimits:false}).setView([35.55,139.7],9);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:""}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+  setTimeout(()=>map.invalidateSize(),250);
+  if(EVENTS.length) render();
+}
+syncCats(); syncDates();
+Promise.all([
+  fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
+  fetch(DATA_A).then(r=>r.json()),
+  fetch(DATA_B).then(r=>r.json())
+]).then(([src,a,b])=>{
+  (0,eval)(src);
+  EVENTS=a.concat(b);
+  startMap();
+}).catch(err=>{
+  document.getElementById("map").textContent="Map failed: "+err;
+});
+</script>
+</body>
+</html>
