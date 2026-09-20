@@ -140,7 +140,7 @@ CAT_KEYS.forEach(key=>{
   };
   filters.appendChild(b);
 });
-const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
+const all=document.createElement("button"); all.id="allDates"; all.textContent="All";
 all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));prune();syncPlaces();syncCats();syncDates();hideCard();render()};
 dates.appendChild(all);
 DAYS.forEach(d=>{
