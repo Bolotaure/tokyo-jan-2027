@@ -66,9 +66,10 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@7cd8f3e35cff95373416117863827113d1ed73a4/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@f797b75e6f86d8909bbea1305b361efd7d2d4067/events-b.json";
 const DATA_C="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@5d1b51e54ece2b206eab48b4c8325684c76d33f5/events-c.json";
+const DATA_D="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@4701c0d6845f212d14b0b1a3c8735ef1857df625/events-d.json";
 const PLACES={tokyo:{label:"Tokyo",color:"#8b3a2a"},yokohama:{label:"Yokohama",color:"#0b5f7a"},kamakura:{label:"Kamakura",color:"#7a4a1e"},chiba:{label:"Chiba",color:"#3d4f99"}};
 const PLACE_KEYS=Object.keys(PLACES);
-const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},museums:{label:"Museums",color:"#4a5d8f"},food:{label:"Food",color:"#b4532a"}};
+const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},museums:{label:"Museums",color:"#4a5d8f"},food:{label:"Food",color:"#b4532a"},views:{label:"Views",color:"#1f5f7a"}};
 const CAT_KEYS=Object.keys(CATS);
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
 let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null;
@@ -229,10 +230,11 @@ Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
   fetch(DATA_A).then(r=>r.json()),
   fetch(DATA_B).then(r=>r.json()),
-  fetch(DATA_C).then(r=>r.json())
-]).then(([src,a,b,c])=>{
+  fetch(DATA_C).then(r=>r.json()),
+  fetch(DATA_D).then(r=>r.json())
+]).then(([src,a,b,c,d])=>{
   (0,eval)(src);
-  EVENTS=a.concat(b,c);
+  EVENTS=a.concat(b,c,d);
   prune();syncPlaces();syncCats();syncDates();
   startMap();
 }).catch(err=>{
