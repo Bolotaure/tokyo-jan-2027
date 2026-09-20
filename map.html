@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Tokyo events map</title>
+<title>Event map</title>
 <style>
 :root{--bg:#f4efe6;--ink:#1c1915;--muted:#5c564c;--line:#e4d9c8}
 *{box-sizing:border-box}
@@ -56,8 +56,8 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <body>
 <div id="top">
 <header>
-<div class="kicker">5–11 JANUARY 2027</div>
-<div class="title"><h1>Event map</h1><div class="title-right"><button id="sortBtn" type="button"></button><span id="count"></span></div></div>
+<div class="kicker" id="kicker"></div>
+<div class="title"><h1 id="pageTitle">Event map</h1><div class="title-right"><button id="sortBtn" type="button"></button><span id="count"></span></div></div>
 <div class="row"><span class="lbl">Place</span><div id="places"></div></div>
 <div class="row"><span class="lbl">Type</span><div id="filters"></div></div>
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
@@ -67,24 +67,16 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div id="list"></div>
 <div id="map"></div>
 <script>
-const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ca6a7d38c384ee979f38f8488b698964f034df23/events-a.json";
-const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@2416116f03ead9dec70aa8826bbbcbc05c2e879f/events-b.json";
-const DATA_C="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@5d1b51e54ece2b206eab48b4c8325684c76d33f5/events-c.json";
-const DATA_D="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ee1b688679a3c09461f93ed4feb49625d2486f39/events-d.json";
-const DATA_E="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@97bf4891d6f5d5c3868d4183ecc96345a503d617/events-e.json";
-const DATA_F="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@fb31ab01d19b98ebdb9dc2146905dc611f299122/events-f.json";
-const PLACES={tokyo:{label:"Tokyo"},yokohama:{label:"Yokohama"},kamakura:{label:"Kamakura"},chiba:{label:"Chiba"}};
-const PLACE_KEYS=Object.keys(PLACES);
+const PAGE_HOST="https://raw.githubusercontent.com/Bolotaure/tokyo-jan-2027/main/pages/";
 const CATS={culture:{label:"Culture",color:"#7A1F1F"},walks:{label:"Walks",color:"#4D7C0F"},games:{label:"Games",color:"#1D4ED8"},kids:{label:"Kids",color:"#E85D04"},skate:{label:"Skating",color:"#0891B2"},lights:{label:"Lights",color:"#EAB308"},animals:{label:"Animals",color:"#15803D"},shows:{label:"Shows",color:"#BE185D"},museums:{label:"Museums",color:"#334155"},immersive:{label:"Immersive",color:"#7C3AED"},food:{label:"Food",color:"#DC2626"},views:{label:"Views",color:"#2563EB"}};
 const CAT_KEYS=Object.keys(CATS);
-const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
 const SORTS=[
   {id:"date",label:"Date",icon:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'},
   {id:"type",label:"Type",icon:'<svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>'},
   {id:"place",label:"Place",icon:'<svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.2"/></svg>'},
   {id:"name",label:"A–Z",icon:'<svg viewBox="0 0 24 24"><path d="M4 17l4-10 4 10M5.5 13h5M15 7h5l-5 10h5"/></svg>'}
 ];
-let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=1;
+let PLACES={}, PLACE_KEYS=[], DAYS=[], EVENTS=[], places, cats, selected, map, layer, current=null, sortIdx=1;
 const placeBox=document.getElementById("places");
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
@@ -96,7 +88,9 @@ function paint(b,on,color){
   b.style.color=on?"#fff":"#1c1915";
   b.style.borderColor=on?(color||"#1c1915"):"";
 }
-function syncPlaces(){
+function pageId(){return new URLSearchParams(location.search).get("page")||"tokyo-jan-2027"}
+function pageUrl(id){return PAGE_HOST+id+".json"}
+function paintPlaces(){
   paint(document.getElementById("allPlaces"),places.size===PLACE_KEYS.length);
   placeBox.querySelectorAll("[data-place]").forEach(b=>{
     const on=places.has(b.dataset.place);
@@ -105,7 +99,7 @@ function syncPlaces(){
     paint(b,on&&ok);
   });
 }
-function syncCats(){
+function paintCats(){
   paint(document.getElementById("allCats"),cats.size===CAT_KEYS.length);
   filters.querySelectorAll("[data-cat]").forEach(b=>{
     const on=cats.has(b.dataset.cat);
@@ -114,54 +108,58 @@ function syncCats(){
     paint(b,on&&ok,CATS[b.dataset.cat].color);
   });
 }
-const allPlace=document.createElement("button"); allPlace.id="allPlaces"; allPlace.textContent="All";
-allPlace.onclick=()=>{places=new Set(PLACE_KEYS);prune();syncPlaces();syncCats();syncDates();hideCard();render()};
-placeBox.appendChild(allPlace);
-PLACE_KEYS.forEach(key=>{
-  const b=document.createElement("button"); b.dataset.place=key; b.textContent=PLACES[key].label;
-  b.onclick=()=>{
-    if(places.size===PLACE_KEYS.length) places=new Set([key]);
-    else if(places.has(key)){places.delete(key); if(!places.size) places=new Set(PLACE_KEYS)}
-    else places.add(key);
-    prune();syncPlaces();syncCats();syncDates();hideCard();render();
-  };
-  placeBox.appendChild(b);
-});
-const allCat=document.createElement("button"); allCat.id="allCats"; allCat.textContent="All";
-allCat.onclick=()=>{cats=new Set(CAT_KEYS);prune();syncPlaces();syncCats();syncDates();hideCard();render()};
-filters.appendChild(allCat);
-CAT_KEYS.forEach(key=>{
-  const b=document.createElement("button"); b.dataset.cat=key; b.textContent=CATS[key].label;
-  b.onclick=()=>{
-    if(cats.size===CAT_KEYS.length) cats=new Set([key]);
-    else if(cats.has(key)){cats.delete(key); if(!cats.size) cats=new Set(CAT_KEYS)}
-    else cats.add(key);
-    prune();syncPlaces();syncCats();syncDates();hideCard();render();
-  };
-  filters.appendChild(b);
-});
-const all=document.createElement("button"); all.id="allDates"; all.textContent="All";
-all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));prune();syncPlaces();syncCats();syncDates();hideCard();render()};
-dates.appendChild(all);
-DAYS.forEach(d=>{
-  const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
-  b.onclick=()=>{
-    if(selected.size===DAYS.length) selected=new Set([d.iso]);
-    else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
-    else selected.add(d.iso);
-    prune();syncPlaces();syncCats();syncDates();hideCard();render();
-  };
-  dates.appendChild(b);
-});
-function syncDates(){
+function paintDates(){
   paint(document.getElementById("allDates"),selected.size===DAYS.length);
-  document.querySelectorAll("#dates [data-iso]").forEach(b=>{
+  dates.querySelectorAll("[data-iso]").forEach(b=>{
     const on=selected.has(b.dataset.iso);
     const ok=!EVENTS.length||dateRelevant(b.dataset.iso);
     b.classList.toggle("off",!ok);
     paint(b,on&&ok);
   });
 }
+function buildChips(){
+  placeBox.innerHTML=""; filters.innerHTML=""; dates.innerHTML="";
+  const allPlace=document.createElement("button"); allPlace.id="allPlaces"; allPlace.textContent="All";
+  allPlace.onclick=()=>{places=new Set(PLACE_KEYS);prune();sync();hideCard();render()};
+  placeBox.appendChild(allPlace);
+  PLACE_KEYS.forEach(key=>{
+    const b=document.createElement("button"); b.dataset.place=key; b.textContent=PLACES[key].label;
+    b.onclick=()=>{
+      if(places.size===PLACE_KEYS.length) places=new Set([key]);
+      else if(places.has(key)){places.delete(key); if(!places.size) places=new Set(PLACE_KEYS)}
+      else places.add(key);
+      prune();sync();hideCard();render();
+    };
+    placeBox.appendChild(b);
+  });
+  const allCat=document.createElement("button"); allCat.id="allCats"; allCat.textContent="All";
+  allCat.onclick=()=>{cats=new Set(CAT_KEYS);prune();sync();hideCard();render()};
+  filters.appendChild(allCat);
+  CAT_KEYS.forEach(key=>{
+    const b=document.createElement("button"); b.dataset.cat=key; b.textContent=CATS[key].label;
+    b.onclick=()=>{
+      if(cats.size===CAT_KEYS.length) cats=new Set([key]);
+      else if(cats.has(key)){cats.delete(key); if(!cats.size) cats=new Set(CAT_KEYS)}
+      else cats.add(key);
+      prune();sync();hideCard();render();
+    };
+    filters.appendChild(b);
+  });
+  const all=document.createElement("button"); all.id="allDates"; all.textContent="All";
+  all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));prune();sync();hideCard();render()};
+  dates.appendChild(all);
+  DAYS.forEach(d=>{
+    const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
+    b.onclick=()=>{
+      if(selected.size===DAYS.length) selected=new Set([d.iso]);
+      else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
+      else selected.add(d.iso);
+      prune();sync();hideCard();render();
+    };
+    dates.appendChild(b);
+  });
+}
+function sync(){paintPlaces();paintCats();paintDates()}
 function syncSort(){
   const s=SORTS[sortIdx];
   sortBtn.innerHTML=s.icon;
@@ -169,25 +167,19 @@ function syncSort(){
   paint(sortBtn,true);
 }
 sortBtn.onclick=()=>{sortIdx=(sortIdx+1)%SORTS.length;syncSort();render()};
-syncSort();
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
 function typeRelevant(key){return EVENTS.some(e=>places.has(placeOf(e))&&typeOf(e)===key&&overlaps(e))}
 function dateRelevant(iso){return EVENTS.some(e=>places.has(placeOf(e))&&cats.has(typeOf(e))&&e.start<=iso&&e.end>=iso)}
 function placeRelevant(key){return EVENTS.some(e=>placeOf(e)===key&&cats.has(typeOf(e))&&overlaps(e))}
 function prune(){
-  if(EVENTS.length){
-    if(cats.size!==CAT_KEYS.length){CAT_KEYS.forEach(k=>{if(!typeRelevant(k)) cats.delete(k)}); if(!cats.size) cats=new Set(CAT_KEYS)}
-    if(selected.size!==DAYS.length){DAYS.forEach(d=>{if(!dateRelevant(d.iso)) selected.delete(d.iso)}); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
-    if(places.size!==PLACE_KEYS.length){PLACE_KEYS.forEach(k=>{if(!placeRelevant(k)) places.delete(k)}); if(!places.size) places=new Set(PLACE_KEYS)}
-  }
+  if(!EVENTS.length) return;
+  if(cats.size!==CAT_KEYS.length){CAT_KEYS.forEach(k=>{if(!typeRelevant(k)) cats.delete(k)}); if(!cats.size) cats=new Set(CAT_KEYS)}
+  if(selected.size!==DAYS.length){DAYS.forEach(d=>{if(!dateRelevant(d.iso)) selected.delete(d.iso)}); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
+  if(places.size!==PLACE_KEYS.length){PLACE_KEYS.forEach(k=>{if(!placeRelevant(k)) places.delete(k)}); if(!places.size) places=new Set(PLACE_KEYS)}
 }
-function placeOf(e){return e.place||(e.cat==="yoko"?"yokohama":e.cat==="kama"?"kamakura":"tokyo")}
+function placeOf(e){return e.place||(e.cat==="yoko"?"yokohama":e.cat==="kama"?"kamakura":PLACE_KEYS[0]||"tokyo")}
 function typeOf(e){return CATS[e.cat]?e.cat:"culture"}
-function typeMeta(e){
-  const t=typeOf(e);
-  const c=CATS[t]||CATS.culture;
-  return `<span class="type" style="color:${c.color}">${c.label}</span>`;
-}
+function typeMeta(e){const t=typeOf(e);const c=CATS[t]||CATS.culture;return `<span class="type" style="color:${c.color}">${c.label}</span>`}
 function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
 function linksFor(e){
   const q=encodeURIComponent(e.name);
@@ -222,7 +214,7 @@ function fitVisible(){
 function hideCard(){
   current=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
-  if(map){map.invalidateSize();}
+  if(map) map.invalidateSize();
   fitVisible();
 }
 function showCard(e, art){
@@ -263,20 +255,31 @@ function startMap(){
   setTimeout(()=>map.invalidateSize(),250);
   if(EVENTS.length) render();
 }
-prune(); syncPlaces(); syncCats(); syncDates();
+function applyPage(cfg, lists){
+  document.getElementById("kicker").textContent=cfg.kicker||"";
+  document.getElementById("pageTitle").textContent=cfg.title||"Event map";
+  document.title=cfg.title||"Event map";
+  PLACES=cfg.places||{};
+  PLACE_KEYS=Object.keys(PLACES);
+  DAYS=cfg.days||[];
+  EVENTS=[].concat(cfg.events||[], ...lists).map((ev,i)=>Object.assign({},ev,{_i:i}));
+  places=new Set(PLACE_KEYS);
+  cats=new Set(CAT_KEYS);
+  selected=new Set(DAYS.map(d=>d.iso));
+  buildChips();
+  prune(); sync(); syncSort();
+}
+const id=pageId();
 Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
-  fetch(DATA_A).then(r=>r.json()),
-  fetch(DATA_B).then(r=>r.json()),
-  fetch(DATA_C).then(r=>r.json()),
-  fetch(DATA_D).then(r=>r.json()),
-  fetch(DATA_E).then(r=>r.json()),
-  fetch(DATA_F).then(r=>r.json())
-]).then(([src,a,b,c,d,e,f])=>{
+  fetch(pageUrl(id)).then(r=>{if(!r.ok) throw new Error("Page "+id+" not found"); return r.json()})
+]).then(([src,cfg])=>{
   (0,eval)(src);
-  EVENTS=a.concat(b,c,d,e,f).map((ev,i)=>Object.assign(ev,{_i:i}));
-  prune();syncPlaces();syncCats();syncDates();
-  startMap();
+  const srcs=cfg.sources||[];
+  return Promise.all(srcs.map(u=>fetch(u).then(r=>r.json()))).then(lists=>{
+    applyPage(cfg, lists);
+    startMap();
+  });
 }).catch(err=>{
   document.getElementById("map").textContent="Map failed: "+err;
 });
