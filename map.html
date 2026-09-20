@@ -21,14 +21,20 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list .meta,#list .desc{font-size:12px;color:var(--muted)}
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc{display:block}
-#mapwrap{position:relative;height:44vh;min-height:230px;border-top:1px solid var(--line);background:#cfe0d4;touch-action:none;overflow:hidden}
-#mapframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
-#pins{position:absolute;left:0;right:0;top:0;bottom:28px}
-#pins span{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
-#pins span.on{width:16px;height:16px;z-index:2}
-.zoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:3}
-.zoom button{width:36px;height:36px;border-radius:8px;font-size:20px;padding:0;background:#fff}
+#map{height:44vh;min-height:230px;background:#cfe0d4}
+.leaflet-container{height:100%;width:100%}
+.pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;position:relative;background:#ddd}
+.leaflet-map-pane{z-index:1}.leaflet-tile-pane{z-index:2}.leaflet-overlay-pane{z-index:4}.leaflet-shadow-pane{z-index:5}.leaflet-marker-pane{z-index:6}.leaflet-tooltip-pane{z-index:7}.leaflet-popup-pane{z-index:8}
+.leaflet-control{position:relative;z-index:8;pointer-events:auto}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:9;pointer-events:none}
+.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}
+.leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
+.leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
+.leaflet-popup-content-wrapper{background:#fff;border-radius:8px;padding:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.leaflet-popup-tip{width:12px;height:12px;background:#fff;transform:rotate(45deg);margin:-8px auto 0}
 </style>
 </head>
 <body>
@@ -39,60 +45,25 @@ a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
 <div id="list"></div>
-<div id="mapwrap">
-<iframe id="mapframe" title="Map" src="https://www.openstreetmap.org/export/embed.html?bbox=139.38,35.28,140.06,35.76&layer=mapnik"></iframe>
-<div id="pins"></div>
-<div class="zoom">
-<button type="button" id="zin">+</button>
-<button type="button" id="zout">−</button>
-<button type="button" id="zreset">↺</button>
-</div>
-</div>
+<div id="map"></div>
 <script>
-let W=139.38, E=140.06, S=35.28, N=35.76;
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
-let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), activeName=null, lastShown=[];
+let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), map, layer;
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
-const frame=document.getElementById("mapframe");
-const wrap=document.getElementById("mapwrap");
-function mercY(lat){const r=lat*Math.PI/180;return Math.log(Math.tan(Math.PI/4+r/2))}
-function invMerc(y){return (2*Math.atan(Math.exp(y))-Math.PI/2)*180/Math.PI}
-function visibleBox(){
-  const w=wrap.clientWidth||320;
-  const h=Math.max((wrap.clientHeight||240)-28,120);
-  const aspect=w/h;
-  let x0=W, x1=E, y0=mercY(S), y1=mercY(N);
-  const boxA=(x1-x0)/Math.max(y1-y0,1e-9);
-  if(aspect>boxA){
-    const extra=(aspect*(y1-y0)-(x1-x0))/2;
-    x0-=extra; x1+=extra;
-  } else {
-    const extra=((x1-x0)/aspect-(y1-y0))/2;
-    y0-=extra; y1+=extra;
-  }
-  return {x0,x1,y0,y1};
-}
-function xy(e){
-  const v=visibleBox();
-  return {
-    left:((e.lng-v.x0)/(v.x1-v.x0)*100)+"%",
-    top:((v.y1-mercY(e.lat))/(v.y1-v.y0)*100)+"%"
-  };
-}
 function addCat(key,label,color){
   const b=document.createElement("button"); b.textContent=label;
   if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
-  b.onclick=()=>{cat=key;filters.querySelectorAll("button").forEach(x=>{x.style.background="#fff";x.style.color="#1c1915"});b.style.background=key==="all"?"#1c1915":color;b.style.color="#fff";activeName=null;render(true)};
+  b.onclick=()=>{cat=key;filters.querySelectorAll("button").forEach(x=>{x.style.background="#fff";x.style.color="#1c1915"});b.style.background=key==="all"?"#1c1915":color;b.style.color="#fff";render()};
   filters.appendChild(b);
 }
 addCat("all","All","#1c1915");
 Object.entries(CATS).forEach(([k,v])=>addCat(k,v.label,v.color));
 const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
-all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();activeName=null;render(true)};
+all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();render()};
 dates.appendChild(all);
 DAYS.forEach(d=>{
   const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
@@ -100,98 +71,62 @@ DAYS.forEach(d=>{
     if(selected.size===DAYS.length) selected=new Set([d.iso]);
     else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
     else selected.add(d.iso);
-    syncDates(); activeName=null; render(true);
+    syncDates(); render();
   };
   dates.appendChild(b);
 });
 function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
-function applyView(){
-  frame.src="https://www.openstreetmap.org/export/embed.html?bbox="+W+","+S+","+E+","+N+"&layer=mapnik";
-}
-frame.addEventListener("load",placePins);
-function fit(points){
-  if(!points.length) return;
-  let minLat=points[0].lat, maxLat=points[0].lat, minLng=points[0].lng, maxLng=points[0].lng;
-  points.forEach(p=>{minLat=Math.min(minLat,p.lat);maxLat=Math.max(maxLat,p.lat);minLng=Math.min(minLng,p.lng);maxLng=Math.max(maxLng,p.lng)});
-  let pad=Math.max((maxLat-minLat)*0.28,(maxLng-minLng)*0.28,0.025);
-  if(points.length===1) pad=0.035;
-  S=minLat-pad; N=maxLat+pad; W=minLng-pad; E=maxLng+pad;
-  applyView();
-}
-function zoomBy(factor){
-  const latC=(S+N)/2, lngC=(W+E)/2;
-  let h=(N-S)*factor/2, w=(E-W)*factor/2;
-  h=Math.min(Math.max(h,0.008),0.4);
-  w=Math.min(Math.max(w,0.012),0.55);
-  S=latC-h; N=latC+h; W=lngC-w; E=lngC+w;
-  applyView();
-}
-function placePins(){
-  const pins=document.getElementById("pins"); pins.innerHTML="";
-  lastShown.forEach(e=>{
-    const p=document.createElement("span");
-    const pos=xy(e);
-    p.style.left=pos.left; p.style.top=pos.top;
-    p.style.background=CATS[e.cat].color;
-    if(activeName===e.name) p.className="on";
-    p.title=e.name;
-    p.onclick=()=>selectEvent(e.name);
-    pins.appendChild(p);
-  });
-}
-function selectEvent(name){
-  activeName = activeName===name ? null : name;
-  render(true);
-  if(activeName){
-    const art=document.querySelector("#list article.active");
-    if(art) art.scrollIntoView({block:"nearest"});
-  }
-}
-function render(doFit){
+function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-8]})}
+function render(){
+  if(!layer) return;
+  layer.clearLayers();
   const list=document.getElementById("list"); list.innerHTML="";
-  lastShown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
-  document.getElementById("count").textContent=lastShown.length+" places";
-  lastShown.forEach(e=>{
+  const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
+  document.getElementById("count").textContent=shown.length+" places";
+  shown.forEach(e=>{
     const q=encodeURIComponent(e.name);
     const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
     const gmap="https://www.google.com/maps/search/?api=1&query="+e.lat+","+e.lng;
     const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Site</a>`:"";
+    const links=`${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Google Maps</a>`;
+    const pop=`<strong>${e.name}</strong><div>${e.when}<br>${e.venue}</div><p>${e.desc||""}</p>${links}`;
+    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).bindPopup(pop);
+    m.addTo(layer);
     const art=document.createElement("article");
-    if(activeName===e.name) art.className="active";
-    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div>${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Google Maps</a></div>`;
-    art.onclick=()=>selectEvent(e.name);
+    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div>${links}</div>`;
+    const act=fromList=>{
+      const already=art.classList.contains("active");
+      list.querySelectorAll("article").forEach(a=>a.classList.remove("active"));
+      if(fromList&&already){map.closePopup();return}
+      art.classList.add("active"); map.setView([e.lat,e.lng],14); m.openPopup();
+    };
+    art.onclick=()=>act(true); m.on("click",()=>act(false));
     art.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
     list.appendChild(art);
   });
-  if(doFit!==false){
-    const focus=activeName?lastShown.filter(e=>e.name===activeName):lastShown;
-    fit(focus.length?focus:lastShown);
-  } else placePins();
+  if(shown.length){map.invalidateSize(); map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.2))}
 }
-document.getElementById("zin").onclick=()=>zoomBy(0.6);
-document.getElementById("zout").onclick=()=>zoomBy(1.6);
-document.getElementById("zreset").onclick=()=>{activeName=null;render(true)};
-let pinch=0;
-wrap.addEventListener("touchstart",ev=>{
-  if(ev.touches.length===2){
-    const a=ev.touches[0], b=ev.touches[1];
-    pinch=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-  }
-},{passive:true});
-wrap.addEventListener("touchmove",ev=>{
-  if(ev.touches.length===2 && pinch){
-    ev.preventDefault();
-    const a=ev.touches[0], b=ev.touches[1];
-    const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
-    if(Math.abs(d-pinch)>28){ zoomBy(d>pinch?0.72:1.38); pinch=d; }
-  }
-},{passive:false});
-window.addEventListener("resize",placePins);
+function startMap(){
+  map=L.map("map").setView([35.55,139.7],9);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+  setTimeout(()=>map.invalidateSize(),250);
+  if(EVENTS.length) render();
+}
 syncDates();
-Promise.all([fetch(DATA_A).then(r=>r.json()),fetch(DATA_B).then(r=>r.json())])
-  .then(([a,b])=>{EVENTS=a.concat(b);render(true)});
+Promise.all([
+  fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
+  fetch(DATA_A).then(r=>r.json()),
+  fetch(DATA_B).then(r=>r.json())
+]).then(([src,a,b])=>{
+  (0,eval)(src);
+  EVENTS=a.concat(b);
+  startMap();
+}).catch(err=>{
+  document.getElementById("map").textContent="Map failed: "+err;
+});
 </script>
 </body>
 </html>
