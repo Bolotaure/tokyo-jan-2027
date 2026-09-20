@@ -4,25 +4,26 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tokyo events map</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
 :root{--bg:#f4efe6;--ink:#1c1915;--muted:#5c564c;--line:#e4d9c8}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;font-family:-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+html,body{margin:0;min-height:100%;font-family:-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
 header{padding:12px 14px 8px}
 .kicker{color:#c45c26;font-size:11px;letter-spacing:.12em;font-weight:700}
 h1{margin:4px 0 6px;font-size:22px}
 .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
 .lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
 button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
-#list{max-height:28vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
+#list{max-height:30vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
 #list article{padding:10px 12px;border-bottom:1px solid var(--line)}
 #list article.active{background:#f8efe4}
 #list h3{margin:0 0 2px;font-size:14px}
 #list .meta,#list .desc{font-size:12px;color:var(--muted)}
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc,#list article.active .web{display:block}
-#map{height:52vh;background:#d7e3d2}
+#map{height:48vh;min-height:240px;background:#cfe0d4}
+.leaflet-container{height:100%;width:100%}
 .pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 a.web{color:#c45c26;font-weight:600;font-size:12px}
 </style>
@@ -34,8 +35,9 @@ a.web{color:#c45c26;font-weight:600;font-size:12px}
 <div class="row"><span class="lbl">Category</span><div id="filters"></div><span id="count"></span></div>
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
-<div id="list"></div><div id="map"></div>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="list"></div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
@@ -84,7 +86,11 @@ function render(){
       list.querySelectorAll("article").forEach(a=>a.classList.remove("active"));
       if(fromList&&already){if(map) map.closePopup();return}
       art.classList.add("active");
-      if(map){map.setView([e.lat,e.lng],14); if(art._marker) art._marker.openPopup()}
+      if(map){
+        map.setView([e.lat,e.lng],14);
+        map.invalidateSize();
+        if(art._marker) art._marker.openPopup();
+      }
     };
     art.onclick=()=>open(true);
     art.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
@@ -95,14 +101,24 @@ function render(){
     }
     list.appendChild(art);
   });
-  if(map&&shown.length) map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(.12));
+  if(map&&shown.length){
+    map.invalidateSize();
+    map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(.12));
+  }
+}
+function initMap(){
+  if(!window.L){
+    document.getElementById("map").innerHTML="<p style=padding:12px>Map library blocked. Filters and list still work.</p>";
+    return;
+  }
+  map=L.map("map",{tap:true}).setView([35.55,139.7],9);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+  setTimeout(()=>{map.invalidateSize(); if(EVENTS.length) render();},400);
 }
 syncDates();
-if(window.L){
-  map=L.map("map").setView([35.55,139.7],9);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(map);
-  layer=L.layerGroup().addTo(map);
-}
+if(window.L) initMap();
+else document.addEventListener("DOMContentLoaded", initMap);
 Promise.all([fetch(DATA_A).then(r=>r.json()),fetch(DATA_B).then(r=>r.json())])
   .then(([a,b])=>{EVENTS=a.concat(b);render()})
   .catch(err=>{document.getElementById("list").innerHTML="<article><h3>Could not load events</h3><p class=desc>"+err+"</p></article>"});
