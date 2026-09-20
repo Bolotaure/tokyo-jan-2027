@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;height:100dvh;overflow:hidden;font-family:-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
 body{display:flex;flex-direction:column}
-#top{position:relative;flex:0 0 auto}
+#top{position:relative;flex:0 0 auto;min-height:204px}
 header{padding:8px 12px 4px}
 .kicker{color:#c45c26;font-size:11px;letter-spacing:.12em;font-weight:700}
 .title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 4px}
@@ -38,13 +38,14 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 .leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
 .leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
 .leaflet-control-attribution,.leaflet-popup{display:none!important}
-#card{display:none;position:absolute;inset:0;background:#fff;padding:10px 12px;overflow:auto}
+#card{display:none;position:absolute;inset:0;background:#fff;padding:10px 12px;overflow:hidden}
 #card.on{display:block}
-#card h2{margin:0 0 4px;font-size:18px;line-height:1.25}
-#card .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
-#card .desc{font-size:15px;line-height:1.45;margin:0 0 12px}
-#card .links{display:flex;flex-wrap:wrap;gap:8px}
-#card .links a{background:#f4efe6;border-radius:999px;padding:8px 12px;text-decoration:none}
+#card h2{margin:0 0 4px;font-size:18px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#card .meta{color:var(--muted);font-size:13px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#card .desc{font-size:15px;line-height:1.4;height:7em;margin:0 0 10px;overflow:hidden}
+#card .links{display:flex;gap:8px}
+#card .links a{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#f4efe6;border-radius:50%;text-decoration:none;color:#1c1915}
+#card .links svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -112,8 +113,11 @@ function linksFor(e){
   const q=encodeURIComponent(e.name);
   const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
   const gmap="https://www.google.com/maps/search/?api=1&query="+e.lat+","+e.lng;
-  const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Site</a>`:"";
-  return `${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Maps</a>`;
+  const globe='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>';
+  const nav='<svg viewBox="0 0 24 24"><path d="M12 3l8 18-8-4-8 4z"/></svg>';
+  const pin='<svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.2"/></svg>';
+  const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener" title="Site">${globe}</a>`:"";
+  return `${site}<a class="web" href="${apple}" title="Plans">${nav}</a><a class="web" href="${gmap}" title="Maps">${pin}</a>`;
 }
 function visibleEvents(){return EVENTS.filter(e=>cats.has(e.cat)&&overlaps(e))}
 function fitVisible(){
