@@ -15,6 +15,8 @@ header{padding:8px 12px 4px}
 .title{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 4px}
 h1{margin:0;font-size:20px}
 #count{font-size:13px;color:var(--muted);white-space:nowrap}
+.title-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+#sortBtn{padding:3px 8px}
 .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 .lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
 button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 8px;font-size:11px}
@@ -54,7 +56,7 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div id="top">
 <header>
 <div class="kicker">5–11 JANUARY 2027</div>
-<div class="title"><h1>Event map</h1><span id="count"></span></div>
+<div class="title"><h1>Event map</h1><div class="title-right"><button id="sortBtn" type="button"></button><span id="count"></span></div></div>
 <div class="row"><span class="lbl">Place</span><div id="places"></div></div>
 <div class="row"><span class="lbl">Type</span><div id="filters"></div></div>
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
@@ -75,11 +77,13 @@ const PLACE_KEYS=Object.keys(PLACES);
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},shows:{label:"Shows",color:"#7a3058"},museums:{label:"Museums",color:"#4a5d8f"},immersive:{label:"Immersive",color:"#6b3fa0"},food:{label:"Food",color:"#b4532a"},views:{label:"Views",color:"#1f5f7a"}};
 const CAT_KEYS=Object.keys(CATS);
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
-let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null;
+const SORTS=[{id:"added",label:"Added"},{id:"date",label:"Date"},{id:"type",label:"Type"},{id:"place",label:"Place"},{id:"name",label:"A–Z"}];
+let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=1;
 const placeBox=document.getElementById("places");
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
 const card=document.getElementById("card");
+const sortBtn=document.getElementById("sortBtn");
 function paint(b,on,color){
   if(!b) return;
   b.style.background=on?(color||"#1c1915"):"#fff";
@@ -152,6 +156,13 @@ function syncDates(){
     paint(b,on&&ok);
   });
 }
+function syncSort(){
+  const s=SORTS[sortIdx];
+  sortBtn.textContent="Order: "+s.label;
+  paint(sortBtn,true);
+}
+sortBtn.onclick=()=>{sortIdx=(sortIdx+1)%SORTS.length;syncSort();render()};
+syncSort();
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
 function typeRelevant(key){return EVENTS.some(e=>places.has(placeOf(e))&&typeOf(e)===key&&overlaps(e))}
 function dateRelevant(iso){return EVENTS.some(e=>places.has(placeOf(e))&&cats.has(typeOf(e))&&e.start<=iso&&e.end>=iso)}
@@ -181,7 +192,19 @@ function linksFor(e){
   const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener" title="Site">${globe}</a>`:"";
   return `${site}<a class="web" href="${apple}" title="Plans">${nav}</a><a class="web" href="${gmap}" title="Maps">${pin}</a>`;
 }
-function visibleEvents(){return EVENTS.filter(e=>places.has(placeOf(e))&&cats.has(typeOf(e))&&overlaps(e))}
+function visibleEvents(){
+  const shown=EVENTS.filter(e=>places.has(placeOf(e))&&cats.has(typeOf(e))&&overlaps(e));
+  const mode=SORTS[sortIdx].id;
+  const cmp=(a,b)=>a<b?-1:a>b?1:0;
+  shown.sort((a,b)=>{
+    if(mode==="date") return cmp(a.start,b.start)||cmp(a.end,b.end)||cmp(a.name,b.name);
+    if(mode==="type") return cmp(CAT_KEYS.indexOf(typeOf(a)),CAT_KEYS.indexOf(typeOf(b)))||cmp(a.name,b.name);
+    if(mode==="place") return cmp(PLACE_KEYS.indexOf(placeOf(a)),PLACE_KEYS.indexOf(placeOf(b)))||cmp(a.name,b.name);
+    if(mode==="name") return cmp(a.name.toLowerCase(),b.name.toLowerCase());
+    return (a._i||0)-(b._i||0);
+  });
+  return shown;
+}
 function fitVisible(){
   if(!map) return;
   const shown=visibleEvents();
@@ -244,7 +267,7 @@ Promise.all([
   fetch(DATA_F).then(r=>r.json())
 ]).then(([src,a,b,c,d,e,f])=>{
   (0,eval)(src);
-  EVENTS=a.concat(b,c,d,e,f);
+  EVENTS=a.concat(b,c,d,e,f).map((ev,i)=>Object.assign(ev,{_i:i}));
   prune();syncPlaces();syncCats();syncDates();
   startMap();
 }).catch(err=>{
