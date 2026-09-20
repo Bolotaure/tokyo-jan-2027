@@ -14,14 +14,18 @@ h1{margin:4px 0 6px;font-size:22px}
 .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
 .lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
 button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
-#list{max-height:32vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
+#list{max-height:28vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
 #list article{padding:10px 12px;border-bottom:1px solid var(--line)}
 #list article.active{background:#f8efe4}
 #list h3{margin:0 0 2px;font-size:14px}
 #list .meta,#list .desc{font-size:12px;color:var(--muted)}
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc{display:block}
-#mapframe{height:42vh;min-height:220px;width:100%;border:0;border-top:1px solid var(--line);display:block;background:#cfe0d4}
+#mapwrap{position:relative;height:44vh;min-height:230px;border-top:1px solid var(--line);background:#cfe0d4}
+#mapframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
+#pins{position:absolute;inset:0}
+#pins span{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transform:translate(-50%,-50%);padding:0}
+#pins span.on{width:16px;height:16px;z-index:2}
 a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 </style>
 </head>
@@ -33,26 +37,29 @@ a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
 <div id="list"></div>
+<div id="mapwrap">
 <iframe id="mapframe" title="Map" src="https://www.openstreetmap.org/export/embed.html?bbox=139.38,35.28,140.06,35.76&layer=mapnik"></iframe>
+<div id="pins"></div>
+</div>
 <script>
+const W=139.38, E=140.06, S=35.28, N=35.76;
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
-let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso));
+let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), activeName=null;
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
-const frame=document.getElementById("mapframe");
 function addCat(key,label,color){
   const b=document.createElement("button"); b.textContent=label;
   if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
-  b.onclick=()=>{cat=key;filters.querySelectorAll("button").forEach(x=>{x.style.background="#fff";x.style.color="#1c1915"});b.style.background=key==="all"?"#1c1915":color;b.style.color="#fff";render()};
+  b.onclick=()=>{cat=key;filters.querySelectorAll("button").forEach(x=>{x.style.background="#fff";x.style.color="#1c1915"});b.style.background=key==="all"?"#1c1915":color;b.style.color="#fff";activeName=null;render()};
   filters.appendChild(b);
 }
 addCat("all","All","#1c1915");
 Object.entries(CATS).forEach(([k,v])=>addCat(k,v.label,v.color));
 const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
-all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();render()};
+all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();activeName=null;render()};
 dates.appendChild(all);
 DAYS.forEach(d=>{
   const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
@@ -60,23 +67,25 @@ DAYS.forEach(d=>{
     if(selected.size===DAYS.length) selected=new Set([d.iso]);
     else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
     else selected.add(d.iso);
-    syncDates(); render();
+    syncDates(); activeName=null; render();
   };
   dates.appendChild(b);
 });
 function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
-function showOnMap(e){
-  const d=0.035;
-  const bbox=(e.lng-d)+","+(e.lat-d)+","+(e.lng+d)+","+(e.lat+d);
-  frame.src="https://www.openstreetmap.org/export/embed.html?bbox="+bbox+"&layer=mapnik&marker="+e.lat+","+e.lng;
-}
-function overview(){
-  frame.src="https://www.openstreetmap.org/export/embed.html?bbox=139.38,35.28,140.06,35.76&layer=mapnik";
+function xy(e){return {left:((e.lng-W)/(E-W)*100)+"%", top:((N-e.lat)/(N-S)*100)+"%"}}
+function selectEvent(name){
+  activeName = activeName===name ? null : name;
+  render();
+  if(activeName){
+    const art=document.querySelector("#list article.active");
+    if(art) art.scrollIntoView({block:"nearest"});
+  }
 }
 function render(){
   const list=document.getElementById("list"); list.innerHTML="";
+  const pins=document.getElementById("pins"); pins.innerHTML="";
   const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
   document.getElementById("count").textContent=shown.length+" places";
   shown.forEach(e=>{
@@ -85,15 +94,19 @@ function render(){
     const gmap="https://www.google.com/maps/search/?api=1&query="+e.lat+","+e.lng;
     const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Site</a>`:"";
     const art=document.createElement("article");
+    if(activeName===e.name) art.className="active";
     art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div>${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Google Maps</a></div>`;
-    art.onclick=()=>{
-      const already=art.classList.contains("active");
-      list.querySelectorAll("article").forEach(a=>a.classList.remove("active"));
-      if(already){overview();return}
-      art.classList.add("active"); showOnMap(e);
-    };
+    art.onclick=()=>selectEvent(e.name);
     art.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
     list.appendChild(art);
+    const p=document.createElement("span");
+    const pos=xy(e);
+    p.style.left=pos.left; p.style.top=pos.top;
+    p.style.background=CATS[e.cat].color;
+    if(activeName===e.name) p.className="on";
+    p.title=e.name;
+    p.onclick=()=>selectEvent(e.name);
+    pins.appendChild(p);
   });
 }
 syncDates();
