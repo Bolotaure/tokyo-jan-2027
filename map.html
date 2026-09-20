@@ -84,7 +84,7 @@ const SORTS=[
   {id:"place",label:"Place",icon:'<svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.2"/></svg>'},
   {id:"name",label:"A–Z",icon:'<svg viewBox="0 0 24 24"><path d="M4 17l4-10 4 10M5.5 13h5M15 7h5l-5 10h5"/></svg>'}
 ];
-let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=0;
+let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=1;
 const placeBox=document.getElementById("places");
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
