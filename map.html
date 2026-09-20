@@ -17,9 +17,8 @@ h1{margin:0;font-size:20px}
 .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 .lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
 button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 8px;font-size:11px}
-#mid{display:flex;flex:0 0 186px;min-height:186px;max-height:32vh;border-top:1px solid var(--line);min-width:0}
-#list{flex:1 1 50%;min-width:0;overflow:auto;background:#fffdf8}
-body.card-on #list{flex:1 1 48%}
+body.card-on header{display:none}
+#list{flex:0 0 174px;min-height:174px;max-height:28vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
 #list article{padding:8px 12px;border-bottom:1px solid var(--line)}
 #list article.active{background:#f8efe4}
 #list h3{margin:0 0 2px;font-size:14px}
@@ -38,11 +37,11 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 .leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
 .leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
 .leaflet-control-attribution,.leaflet-popup{display:none!important}
-#card{display:none;flex:1 1 52%;min-width:0;background:#fff;border-left:1px solid var(--line);padding:10px 12px;overflow:auto}
+#card{display:none;flex:0 1 auto;max-height:28vh;min-height:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 12px;overflow:auto}
 #card.on{display:block}
-#card h2{margin:0 0 4px;font-size:16px;line-height:1.25}
-#card .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
-#card .desc{font-size:13px;line-height:1.4;margin:0 0 10px}
+#card h2{margin:0 0 4px;font-size:18px;line-height:1.25}
+#card .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+#card .desc{font-size:15px;line-height:1.45;margin:0 0 12px}
 #card .links{display:flex;flex-wrap:wrap;gap:8px}
 #card .links a{background:#f4efe6;border-radius:999px;padding:8px 12px;text-decoration:none}
 </style>
@@ -54,8 +53,8 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div class="row"><span class="lbl">Category</span><div id="filters"></div></div>
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
-<div id="mid"><div id="list"></div>
-<div id="card"></div></div>
+<div id="card"></div>
+<div id="list"></div>
 <div id="map"></div>
 <script>
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@cd3cff93801bc4cb935c8ae5b88b8181ba2b17ea/events-a.json";
