@@ -22,18 +22,20 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc{display:block}
 #map{height:44vh;min-height:230px;background:#cfe0d4}
-.leaflet-container{height:100%;width:100%}
+.leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
 .pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
-.leaflet-container{overflow:hidden;position:relative;background:#ddd}
 .leaflet-map-pane{z-index:1}.leaflet-tile-pane{z-index:2}.leaflet-overlay-pane{z-index:4}.leaflet-shadow-pane{z-index:5}.leaflet-marker-pane{z-index:6}.leaflet-tooltip-pane{z-index:7}.leaflet-popup-pane{z-index:8}
 .leaflet-control{position:relative;z-index:8;pointer-events:auto}
 .leaflet-top,.leaflet-bottom{position:absolute;z-index:9;pointer-events:none}
 .leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}
 .leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
 .leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
-.leaflet-popup-content-wrapper{background:#fff;border-radius:8px;padding:8px 12px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.leaflet-popup{margin-bottom:18px}
+.leaflet-popup-content-wrapper{background:#fff;border-radius:10px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:72vw}
+.leaflet-popup-content{margin:0;font-size:13px;line-height:1.35;max-height:22vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.leaflet-popup-content p{margin:6px 0}
 .leaflet-popup-tip{width:12px;height:12px;background:#fff;transform:rotate(45deg);margin:-8px auto 0}
 </style>
 </head>
@@ -78,7 +80,7 @@ DAYS.forEach(d=>{
 function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
-function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-8]})}
+function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-10]})}
 function render(){
   if(!layer) return;
   layer.clearLayers();
@@ -92,7 +94,7 @@ function render(){
     const site=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Site</a>`:"";
     const links=`${site}<a class="web" href="${apple}">Plans</a><a class="web" href="${gmap}">Google Maps</a>`;
     const pop=`<strong>${e.name}</strong><div>${e.when}<br>${e.venue}</div><p>${e.desc||""}</p>${links}`;
-    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).bindPopup(pop);
+    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).bindPopup(pop,{maxWidth:260,autoPan:true,autoPanPadding:[16,48]});
     m.addTo(layer);
     const art=document.createElement("article");
     art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div>${links}</div>`;
