@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Tokyo events map</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root{--bg:#f4efe6;--ink:#1c1915;--muted:#5c564c;--line:#e4d9c8}
 *{box-sizing:border-box}
@@ -22,7 +22,7 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list .meta,#list .desc{font-size:12px;color:var(--muted)}
 #list .desc{display:none;color:var(--ink);margin-top:6px}
 #list article.active .desc,#list article.active .web{display:block}
-#map{height:52vh}
+#map{height:52vh;background:#d7e3d2}
 .pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 a.web{color:#c45c26;font-weight:600;font-size:12px}
 </style>
@@ -35,42 +35,15 @@ a.web{color:#c45c26;font-weight:600;font-size:12px}
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
 <div id="list"></div><div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
+const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
 let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso));
-const map=L.map("map").setView([35.55,139.7],9);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(map);
-const layer=L.layerGroup().addTo(map);
-function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
-function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-8]})}
-function paint(b,on){b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
-function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
-function render(){
-  layer.clearLayers();
-  const list=document.getElementById("list"); list.innerHTML="";
-  const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
-  document.getElementById("count").textContent=shown.length+" places";
-  shown.forEach(e=>{
-    const link=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Official website</a>`:"";
-    const pop=`<strong>${e.name}</strong><div>${e.when}<br>${e.venue}</div><p>${e.desc||""}</p>${link}`;
-    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).bindPopup(pop); m.addTo(layer);
-    const art=document.createElement("article");
-    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p>${link}`;
-    const act=fromList=>{
-      const already=art.classList.contains("active");
-      list.querySelectorAll("article").forEach(a=>a.classList.remove("active"));
-      if(fromList&&already){map.closePopup();return}
-      art.classList.add("active"); map.setView([e.lat,e.lng],14); m.openPopup();
-    };
-    art.onclick=()=>act(true); m.on("click",()=>act(false));
-    art.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
-    list.appendChild(art);
-  });
-  if(shown.length) map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(.12));
-}
 const filters=document.getElementById("filters");
+const dates=document.getElementById("dates");
 function addCat(key,label,color){
   const b=document.createElement("button"); b.textContent=label;
   if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
@@ -79,7 +52,6 @@ function addCat(key,label,color){
 }
 addCat("all","All","#1c1915");
 Object.entries(CATS).forEach(([k,v])=>addCat(k,v.label,v.color));
-const dates=document.getElementById("dates");
 const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
 all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();render()};
 dates.appendChild(all);
@@ -93,10 +65,47 @@ DAYS.forEach(d=>{
   };
   dates.appendChild(b);
 });
-Promise.all([
-  fetch(new URL("events-a.json", location.href)).then(r=>r.json()),
-  fetch(new URL("events-b.json", location.href)).then(r=>r.json())
-]).then(([a,b])=>{EVENTS=a.concat(b);syncDates();render()});
+function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
+function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
+function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
+let map, layer;
+function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-8]})}
+function render(){
+  const list=document.getElementById("list"); list.innerHTML="";
+  const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
+  document.getElementById("count").textContent=shown.length+" places";
+  if(layer) layer.clearLayers();
+  shown.forEach(e=>{
+    const link=e.url?`<a class="web" href="${e.url}" target="_blank" rel="noopener">Official website</a>`:"";
+    const art=document.createElement("article");
+    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p>${link}`;
+    const open=fromList=>{
+      const already=art.classList.contains("active");
+      list.querySelectorAll("article").forEach(a=>a.classList.remove("active"));
+      if(fromList&&already){if(map) map.closePopup();return}
+      art.classList.add("active");
+      if(map){map.setView([e.lat,e.lng],14); if(art._marker) art._marker.openPopup()}
+    };
+    art.onclick=()=>open(true);
+    art.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
+    if(layer){
+      const pop=`<strong>${e.name}</strong><div>${e.when}<br>${e.venue}</div><p>${e.desc||""}</p>${link}`;
+      const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).bindPopup(pop);
+      m.on("click",()=>open(false)); m.addTo(layer); art._marker=m;
+    }
+    list.appendChild(art);
+  });
+  if(map&&shown.length) map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(.12));
+}
+syncDates();
+if(window.L){
+  map=L.map("map").setView([35.55,139.7],9);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OSM"}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+}
+Promise.all([fetch(DATA_A).then(r=>r.json()),fetch(DATA_B).then(r=>r.json())])
+  .then(([a,b])=>{EVENTS=a.concat(b);render()})
+  .catch(err=>{document.getElementById("list").innerHTML="<article><h3>Could not load events</h3><p class=desc>"+err+"</p></article>"});
 </script>
 </body>
 </html>
