@@ -18,6 +18,7 @@ h1{margin:0;font-size:20px}
 .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
 .lbl{font-size:11px;text-transform:uppercase;color:var(--muted)}
 button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 8px;font-size:11px}
+button.off{opacity:.32;pointer-events:none}
 body.card-on header{visibility:hidden}
 #list{flex:0 0 174px;min-height:174px;max-height:28vh;overflow:auto;background:#fffdf8;border-top:1px solid var(--line)}
 #list article{padding:8px 12px;border-bottom:1px solid var(--line)}
@@ -82,14 +83,24 @@ function paint(b,on,color){
 }
 function syncPlaces(){
   paint(document.getElementById("allPlaces"),places.size===PLACE_KEYS.length);
-  placeBox.querySelectorAll("[data-place]").forEach(b=>paint(b,places.has(b.dataset.place),PLACES[b.dataset.place].color));
+  placeBox.querySelectorAll("[data-place]").forEach(b=>{
+    const on=places.has(b.dataset.place);
+    const ok=!EVENTS.length||placeRelevant(b.dataset.place);
+    b.classList.toggle("off",!ok);
+    paint(b,on&&ok,PLACES[b.dataset.place].color);
+  });
 }
 function syncCats(){
   paint(document.getElementById("allCats"),cats.size===CAT_KEYS.length);
-  filters.querySelectorAll("[data-cat]").forEach(b=>paint(b,cats.has(b.dataset.cat),CATS[b.dataset.cat].color));
+  filters.querySelectorAll("[data-cat]").forEach(b=>{
+    const on=cats.has(b.dataset.cat);
+    const ok=!EVENTS.length||typeRelevant(b.dataset.cat);
+    b.classList.toggle("off",!ok);
+    paint(b,on&&ok,CATS[b.dataset.cat].color);
+  });
 }
 const allPlace=document.createElement("button"); allPlace.id="allPlaces"; allPlace.textContent="All";
-allPlace.onclick=()=>{places=new Set(PLACE_KEYS);syncPlaces();hideCard();render()};
+allPlace.onclick=()=>{places=new Set(PLACE_KEYS);prune();syncPlaces();syncCats();syncDates();hideCard();render()};
 placeBox.appendChild(allPlace);
 PLACE_KEYS.forEach(key=>{
   const b=document.createElement("button"); b.dataset.place=key; b.textContent=PLACES[key].label;
@@ -97,12 +108,12 @@ PLACE_KEYS.forEach(key=>{
     if(places.size===PLACE_KEYS.length) places=new Set([key]);
     else if(places.has(key)){places.delete(key); if(!places.size) places=new Set(PLACE_KEYS)}
     else places.add(key);
-    syncPlaces(); hideCard(); render();
+    prune();syncPlaces();syncCats();syncDates();hideCard();render();
   };
   placeBox.appendChild(b);
 });
 const allCat=document.createElement("button"); allCat.id="allCats"; allCat.textContent="All";
-allCat.onclick=()=>{cats=new Set(CAT_KEYS);syncCats();hideCard();render()};
+allCat.onclick=()=>{cats=new Set(CAT_KEYS);prune();syncPlaces();syncCats();syncDates();hideCard();render()};
 filters.appendChild(allCat);
 CAT_KEYS.forEach(key=>{
   const b=document.createElement("button"); b.dataset.cat=key; b.textContent=CATS[key].label;
@@ -110,12 +121,12 @@ CAT_KEYS.forEach(key=>{
     if(cats.size===CAT_KEYS.length) cats=new Set([key]);
     else if(cats.has(key)){cats.delete(key); if(!cats.size) cats=new Set(CAT_KEYS)}
     else cats.add(key);
-    syncCats(); hideCard(); render();
+    prune();syncPlaces();syncCats();syncDates();hideCard();render();
   };
   filters.appendChild(b);
 });
 const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
-all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();hideCard();render()};
+all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));prune();syncPlaces();syncCats();syncDates();hideCard();render()};
 dates.appendChild(all);
 DAYS.forEach(d=>{
   const b=document.createElement("button"); b.dataset.iso=d.iso; b.textContent=d.label;
@@ -123,12 +134,30 @@ DAYS.forEach(d=>{
     if(selected.size===DAYS.length) selected=new Set([d.iso]);
     else if(selected.has(d.iso)){selected.delete(d.iso); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
     else selected.add(d.iso);
-    syncDates(); hideCard(); render();
+    prune();syncPlaces();syncCats();syncDates();hideCard();render();
   };
   dates.appendChild(b);
 });
-function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
+function syncDates(){
+  paint(document.getElementById("allDates"),selected.size===DAYS.length);
+  document.querySelectorAll("#dates [data-iso]").forEach(b=>{
+    const on=selected.has(b.dataset.iso);
+    const ok=!EVENTS.length||dateRelevant(b.dataset.iso);
+    b.classList.toggle("off",!ok);
+    paint(b,on&&ok);
+  });
+}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
+function typeRelevant(key){return EVENTS.some(e=>places.has(placeOf(e))&&typeOf(e)===key&&overlaps(e))}
+function dateRelevant(iso){return EVENTS.some(e=>places.has(placeOf(e))&&cats.has(typeOf(e))&&e.start<=iso&&e.end>=iso)}
+function placeRelevant(key){return EVENTS.some(e=>placeOf(e)===key&&cats.has(typeOf(e))&&overlaps(e))}
+function prune(){
+  if(EVENTS.length){
+    if(cats.size!==CAT_KEYS.length){CAT_KEYS.forEach(k=>{if(!typeRelevant(k)) cats.delete(k)}); if(!cats.size) cats=new Set(CAT_KEYS)}
+    if(selected.size!==DAYS.length){DAYS.forEach(d=>{if(!dateRelevant(d.iso)) selected.delete(d.iso)}); if(!selected.size) selected=new Set(DAYS.map(x=>x.iso))}
+    if(places.size!==PLACE_KEYS.length){PLACE_KEYS.forEach(k=>{if(!placeRelevant(k)) places.delete(k)}); if(!places.size) places=new Set(PLACE_KEYS)}
+  }
+}
 function placeOf(e){return e.place||(e.cat==="yoko"?"yokohama":e.cat==="kama"?"kamakura":"tokyo")}
 function typeOf(e){return CATS[e.cat]?e.cat:"culture"}
 function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
@@ -194,7 +223,7 @@ function startMap(){
   setTimeout(()=>map.invalidateSize(),250);
   if(EVENTS.length) render();
 }
-syncPlaces(); syncCats(); syncDates();
+prune(); syncPlaces(); syncCats(); syncDates();
 Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
   fetch(DATA_A).then(r=>r.json()),
@@ -202,6 +231,7 @@ Promise.all([
 ]).then(([src,a,b])=>{
   (0,eval)(src);
   EVENTS=a.concat(b);
+  prune();syncPlaces();syncCats();syncDates();
   startMap();
 }).catch(err=>{
   document.getElementById("map").textContent="Map failed: "+err;
