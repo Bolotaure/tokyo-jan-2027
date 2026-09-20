@@ -19,7 +19,8 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list article.active{background:#f8efe4}
 #list h3{margin:0 0 2px;font-size:14px}
 #list .meta{font-size:12px;color:var(--muted)}
-#map{height:42vh;min-height:220px;background:#cfe0d4}
+#mapWrap{position:relative;height:42vh;min-height:220px}
+#map{height:100%;background:#cfe0d4}
 .leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
 .pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
@@ -31,9 +32,9 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 .leaflet-control-zoom{border:2px solid rgba(0,0,0,.2);margin:10px}
 .leaflet-bar a{background:#fff;border-bottom:1px solid #ccc;display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;color:#000}
 .leaflet-control-attribution,.leaflet-popup{display:none!important}
-#overlay{display:none;position:fixed;inset:0;background:rgba(28,25,21,.45);z-index:50;align-items:center;justify-content:center;padding:18px}
+#overlay{display:none;position:absolute;inset:0;background:rgba(28,25,21,.35);z-index:500;align-items:center;justify-content:center;padding:12px}
 #overlay.on{display:flex}
-#card{background:#fffdf8;border-radius:16px;padding:18px 16px 16px;max-width:420px;width:100%;max-height:70vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#card{background:#fffdf8;border-radius:16px;padding:16px 14px 14px;max-width:420px;width:100%;max-height:100%;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 #card h2{margin:0 0 6px;font-size:20px;line-height:1.25}
 #card .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
 #card .desc{font-size:15px;line-height:1.45;margin:0 0 14px}
@@ -49,8 +50,10 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div class="row"><span class="lbl">Date</span><div id="dates"></div></div>
 </header>
 <div id="list"></div>
+<div id="mapWrap">
 <div id="map"></div>
 <div id="overlay"><div id="card"></div></div>
+</div>
 <script>
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@d790201c62b873d866e2a60a85f056adfec4447d/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@6fc980334da3934a6d40ea964d04990a96d77d59/events-b.json";
