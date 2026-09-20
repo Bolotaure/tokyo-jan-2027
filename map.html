@@ -73,7 +73,7 @@ const DATA_C="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@5d1b51e54ece2
 const DATA_D="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ee1b688679a3c09461f93ed4feb49625d2486f39/events-d.json";
 const DATA_E="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@97bf4891d6f5d5c3868d4183ecc96345a503d617/events-e.json";
 const DATA_F="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@fb31ab01d19b98ebdb9dc2146905dc611f299122/events-f.json";
-const PLACES={tokyo:{label:"Tokyo",color:"#B91C1C"},yokohama:{label:"Yokohama",color:"#0E7490"},kamakura:{label:"Kamakura",color:"#B45309"},chiba:{label:"Chiba",color:"#4F46E5"}};
+const PLACES={tokyo:{label:"Tokyo"},yokohama:{label:"Yokohama"},kamakura:{label:"Kamakura"},chiba:{label:"Chiba"}};
 const PLACE_KEYS=Object.keys(PLACES);
 const CATS={culture:{label:"Culture",color:"#7A1F1F"},walks:{label:"Walks",color:"#C4841A"},games:{label:"Games",color:"#1D4ED8"},kids:{label:"Kids",color:"#E85D04"},skate:{label:"Skating",color:"#0891B2"},lights:{label:"Lights",color:"#CA8A04"},animals:{label:"Animals",color:"#15803D"},shows:{label:"Shows",color:"#BE185D"},museums:{label:"Museums",color:"#334155"},immersive:{label:"Immersive",color:"#7C3AED"},food:{label:"Food",color:"#DC2626"},views:{label:"Views",color:"#2563EB"}};
 const CAT_KEYS=Object.keys(CATS);
@@ -102,7 +102,7 @@ function syncPlaces(){
     const on=places.has(b.dataset.place);
     const ok=!EVENTS.length||placeRelevant(b.dataset.place);
     b.classList.toggle("off",!ok);
-    paint(b,on&&ok,PLACES[b.dataset.place].color);
+    paint(b,on&&ok);
   });
 }
 function syncCats(){
