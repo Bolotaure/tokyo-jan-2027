@@ -88,7 +88,13 @@ function paint(b,on,color){
   b.style.color=on?"#fff":"#1c1915";
   b.style.borderColor=on?(color||"#1c1915"):"";
 }
-function pageId(){return new URLSearchParams(location.search).get("page")||"tokyo-jan-2027"}
+function pageId(){
+  const q=new URLSearchParams(location.search).get("page");
+  if(q) return q;
+  const h=(location.hash||"").replace(/^#/,"").split("?")[0];
+  if(h) return h;
+  return "tokyo-jan-2027";
+}
 function pageUrl(id){return PAGE_HOST+id+".json"}
 function paintPlaces(){
   paint(document.getElementById("allPlaces"),places.size===PLACE_KEYS.length);
