@@ -93,7 +93,10 @@ DAYS.forEach(d=>{
   };
   dates.appendChild(b);
 });
-fetch(new URL("events.json", location.href)).then(r=>r.json()).then(data=>{EVENTS=data;syncDates();render()});
+Promise.all([
+  fetch(new URL("events-a.json", location.href)).then(r=>r.json()),
+  fetch(new URL("events-b.json", location.href)).then(r=>r.json())
+]).then(([a,b])=>{EVENTS=a.concat(b);syncDates();render()});
 </script>
 </body>
 </html>
