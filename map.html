@@ -21,7 +21,9 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #list .meta{font-size:12px;color:var(--muted)}
 #map{height:42vh;min-height:220px;background:#cfe0d4}
 .leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
-.pin{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.pinwrap,.pinhit{background:transparent}
+.pinhit{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.pin{width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:none}
 a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
 .leaflet-map-pane{z-index:1}.leaflet-tile-pane{z-index:2}.leaflet-overlay-pane{z-index:4}.leaflet-shadow-pane{z-index:5}.leaflet-marker-pane{z-index:6}.leaflet-tooltip-pane{z-index:7}.leaflet-popup-pane{z-index:8}
@@ -98,7 +100,7 @@ DAYS.forEach(d=>{
 });
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
-function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7]})}
+function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
 function linksFor(e){
   const q=encodeURIComponent(e.name);
   const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
@@ -137,18 +139,18 @@ function render(){
   const shown=visibleEvents();
   document.getElementById("count").textContent=shown.length+" places";
   shown.forEach(e=>{
-    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).addTo(layer);
+    const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color),riseOnHover:true,keyboard:true}).addTo(layer);
     const art=document.createElement("article");
     if(current===e.name) art.className="active";
     art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${e.venue}</div>`;
     art.onclick=()=>showCard(e,art);
-    m.on("click",()=>showCard(e,art));
+    m.on("click",ev=>{L.DomEvent.stopPropagation(ev); showCard(e,art);});
     list.appendChild(art);
   });
   if(shown.length) fitVisible();
 }
 function startMap(){
-  map=L.map("map").setView([35.55,139.7],9);
+  map=L.map("map",{tap:true,tapTolerance:28,bounceAtZoomLimits:false}).setView([35.55,139.7],9);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:""}).addTo(map);
   layer=L.layerGroup().addTo(map);
   setTimeout(()=>map.invalidateSize(),250);
