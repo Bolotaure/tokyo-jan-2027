@@ -39,7 +39,6 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 #card .desc{font-size:15px;line-height:1.45;margin:0 0 14px}
 #card .links{display:flex;flex-wrap:wrap;gap:8px}
 #card .links a{background:#f4efe6;border-radius:999px;padding:8px 12px;text-decoration:none}
-#card .close{float:right;border:0;background:#efe8dc;width:32px;height:32px;border-radius:50%;font-size:18px}
 </style>
 </head>
 <body>
@@ -51,27 +50,41 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 </header>
 <div id="list"></div>
 <div id="map"></div>
-<div id="overlay">
-  <div id="card"></div>
-</div>
+<div id="overlay"><div id="card"></div></div>
 <script>
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
+const CAT_KEYS=Object.keys(CATS);
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
-let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null;
+let EVENTS=[], cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null;
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
 const overlay=document.getElementById("overlay");
 const card=document.getElementById("card");
-function addCat(key,label,color){
-  const b=document.createElement("button"); b.textContent=label;
-  if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
-  b.onclick=()=>{cat=key;filters.querySelectorAll("button").forEach(x=>{x.style.background="#fff";x.style.color="#1c1915"});b.style.background=key==="all"?"#1c1915":color;b.style.color="#fff";hideCard();render()};
-  filters.appendChild(b);
+function paint(b,on,color){
+  if(!b) return;
+  b.style.background=on?(color||"#1c1915"):"#fff";
+  b.style.color=on?"#fff":"#1c1915";
+  b.style.borderColor=on?(color||"#1c1915"):"";
 }
-addCat("all","All","#1c1915");
-Object.entries(CATS).forEach(([k,v])=>addCat(k,v.label,v.color));
+function syncCats(){
+  paint(document.getElementById("allCats"),cats.size===CAT_KEYS.length);
+  filters.querySelectorAll("[data-cat]").forEach(b=>paint(b,cats.has(b.dataset.cat),CATS[b.dataset.cat].color));
+}
+const allCat=document.createElement("button"); allCat.id="allCats"; allCat.textContent="All";
+allCat.onclick=()=>{cats=new Set(CAT_KEYS);syncCats();hideCard();render()};
+filters.appendChild(allCat);
+CAT_KEYS.forEach(key=>{
+  const b=document.createElement("button"); b.dataset.cat=key; b.textContent=CATS[key].label;
+  b.onclick=()=>{
+    if(cats.size===CAT_KEYS.length) cats=new Set([key]);
+    else if(cats.has(key)){cats.delete(key); if(!cats.size) cats=new Set(CAT_KEYS)}
+    else cats.add(key);
+    syncCats(); hideCard(); render();
+  };
+  filters.appendChild(b);
+});
 const all=document.createElement("button"); all.id="allDates"; all.textContent="Whole week";
 all.onclick=()=>{selected=new Set(DAYS.map(d=>d.iso));syncDates();hideCard();render()};
 dates.appendChild(all);
@@ -85,7 +98,6 @@ DAYS.forEach(d=>{
   };
   dates.appendChild(b);
 });
-function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
 function icon(c){return L.divIcon({className:"",html:`<div class="pin" style="background:${c}"></div>`,iconSize:[14,14],iconAnchor:[7,7]})}
@@ -105,17 +117,18 @@ function showCard(e, art){
   current=e.name;
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
   if(art){art.classList.add("active"); art.scrollIntoView({block:"nearest"})}
-  card.innerHTML=`<button class="close" type="button" aria-label="Close">×</button><h2>${e.name}</h2><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div class="links">${linksFor(e)}</div>`;
-  card.querySelector(".close").onclick=ev=>{ev.stopPropagation();hideCard()};
+  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div class="links">${linksFor(e)}</div>`;
+  card.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
   overlay.classList.add("on");
   if(map) map.setView([e.lat,e.lng],14,{animate:true});
 }
-overlay.addEventListener("click",ev=>{if(ev.target===overlay) hideCard()});
+overlay.addEventListener("click",hideCard);
+card.addEventListener("click",ev=>{if(ev.target.closest("a")) return; hideCard()});
 function render(){
   if(!layer) return;
   layer.clearLayers();
   const list=document.getElementById("list"); list.innerHTML="";
-  const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
+  const shown=EVENTS.filter(e=>cats.has(e.cat)&&overlaps(e));
   document.getElementById("count").textContent=shown.length+" places";
   shown.forEach(e=>{
     const m=L.marker([e.lat,e.lng],{icon:icon(CATS[e.cat].color)}).addTo(layer);
@@ -135,7 +148,7 @@ function startMap(){
   setTimeout(()=>map.invalidateSize(),250);
   if(EVENTS.length) render();
 }
-syncDates();
+syncCats(); syncDates();
 Promise.all([
   fetch("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js").then(r=>r.text()),
   fetch(DATA_A).then(r=>r.json()),
