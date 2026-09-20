@@ -73,19 +73,18 @@ const DATA_C="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@5d1b51e54ece2
 const DATA_D="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ee1b688679a3c09461f93ed4feb49625d2486f39/events-d.json";
 const DATA_E="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@97bf4891d6f5d5c3868d4183ecc96345a503d617/events-e.json";
 const DATA_F="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@fb31ab01d19b98ebdb9dc2146905dc611f299122/events-f.json";
-const PLACES={tokyo:{label:"Tokyo",color:"#8b3a2a"},yokohama:{label:"Yokohama",color:"#0b5f7a"},kamakura:{label:"Kamakura",color:"#7a4a1e"},chiba:{label:"Chiba",color:"#3d4f99"}};
+const PLACES={tokyo:{label:"Tokyo",color:"#B91C1C"},yokohama:{label:"Yokohama",color:"#0E7490"},kamakura:{label:"Kamakura",color:"#B45309"},chiba:{label:"Chiba",color:"#4F46E5"}};
 const PLACE_KEYS=Object.keys(PLACES);
 const CATS={culture:{label:"Culture",color:"#7A1F1F"},walks:{label:"Walks",color:"#C4841A"},games:{label:"Games",color:"#1D4ED8"},kids:{label:"Kids",color:"#E85D04"},skate:{label:"Skating",color:"#0891B2"},lights:{label:"Lights",color:"#CA8A04"},animals:{label:"Animals",color:"#15803D"},shows:{label:"Shows",color:"#BE185D"},museums:{label:"Museums",color:"#334155"},immersive:{label:"Immersive",color:"#7C3AED"},food:{label:"Food",color:"#DC2626"},views:{label:"Views",color:"#2563EB"}};
 const CAT_KEYS=Object.keys(CATS);
 const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{iso:"2027-01-07",label:"Thu 7"},{iso:"2027-01-08",label:"Fri 8"},{iso:"2027-01-09",label:"Sat 9"},{iso:"2027-01-10",label:"Sun 10"},{iso:"2027-01-11",label:"Mon 11"}];
 const SORTS=[
-  {id:"added",label:"Added",icon:'<svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>'},
   {id:"date",label:"Date",icon:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'},
   {id:"type",label:"Type",icon:'<svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="8.5" cy="8.5" r="1.2"/></svg>'},
   {id:"place",label:"Place",icon:'<svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.2"/></svg>'},
   {id:"name",label:"A–Z",icon:'<svg viewBox="0 0 24 24"><path d="M4 17l4-10 4 10M5.5 13h5M15 7h5l-5 10h5"/></svg>'}
 ];
-let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=1;
+let EVENTS=[], places=new Set(PLACE_KEYS), cats=new Set(CAT_KEYS), selected=new Set(DAYS.map(d=>d.iso)), map, layer, current=null, sortIdx=0;
 const placeBox=document.getElementById("places");
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
@@ -209,7 +208,7 @@ function visibleEvents(){
     if(mode==="type") return cmp(CAT_KEYS.indexOf(typeOf(a)),CAT_KEYS.indexOf(typeOf(b)))||cmp(a.name,b.name);
     if(mode==="place") return cmp(PLACE_KEYS.indexOf(placeOf(a)),PLACE_KEYS.indexOf(placeOf(b)))||cmp(a.name,b.name);
     if(mode==="name") return cmp(a.name.toLowerCase(),b.name.toLowerCase());
-    return (a._i||0)-(b._i||0);
+    return cmp(a.start,b.start)||cmp(a.name,b.name);
   });
   return shown;
 }
