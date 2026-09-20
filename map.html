@@ -35,7 +35,7 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 #card.on{display:block}
 #card h2{margin:0 0 6px;font-size:20px;line-height:1.25}
 #card .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
-#card .desc{font-size:15px;line-height:1.45;margin:0 0 14px;white-space:pre-line;min-height:5.8em}
+#card .desc{font-size:15px;line-height:1.45;margin:0 0 14px}
 #card .links{display:flex;flex-wrap:wrap;gap:8px}
 #card .links a{background:#f4efe6;border-radius:999px;padding:8px 12px;text-decoration:none}
 </style>
@@ -124,7 +124,7 @@ function showCard(e, art){
   current=e.name;
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
   if(art){art.classList.add("active"); art.scrollIntoView({block:"nearest"})}
-  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${e.desc||""}</p><div class="links">${linksFor(e)}</div>`;
+  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${e.when} · ${e.venue}</div><p class="desc">${(e.desc||"").replace(/\n+/g," ")}</p><div class="links">${linksFor(e)}</div>`;
   card.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
   card.classList.add("on");
   if(map){map.invalidateSize(); map.setView([e.lat,e.lng],14,{animate:true});}
