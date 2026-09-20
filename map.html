@@ -25,6 +25,7 @@ body.card-on header{visibility:hidden}
 #list article.active{background:#f8efe4}
 #list h3{margin:0 0 2px;font-size:14px}
 #list .meta{font-size:12px;color:var(--muted)}
+.type{font-weight:700}
 #map{flex:1 1 auto;min-height:160px;background:#cfe0d4}
 .leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
 .pinwrap,.pinhit{background:transparent}
@@ -164,6 +165,11 @@ function prune(){
 }
 function placeOf(e){return e.place||(e.cat==="yoko"?"yokohama":e.cat==="kama"?"kamakura":"tokyo")}
 function typeOf(e){return CATS[e.cat]?e.cat:"culture"}
+function typeMeta(e){
+  const t=typeOf(e);
+  const c=CATS[t]||CATS.culture;
+  return `<span class="type" style="color:${c.color}">${c.label}</span>`;
+}
 function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
 function linksFor(e){
   const q=encodeURIComponent(e.name);
@@ -195,7 +201,7 @@ function showCard(e, art){
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
   if(art){art.classList.add("active"); art.scrollIntoView({block:"nearest"})}
   const loc=PLACES[placeOf(e)]?PLACES[placeOf(e)].label:"";
-  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${e.when} · ${loc} · ${e.venue}</div><p class="desc">${(e.desc||"").replace(/\n+/g," ")}</p><div class="links">${linksFor(e)}</div>`;
+  card.innerHTML=`<h2>${e.name}</h2><div class="meta">${typeMeta(e)} · ${e.when} · ${loc} · ${e.venue}</div><p class="desc">${(e.desc||"").replace(/\n+/g," ")}</p><div class="links">${linksFor(e)}</div>`;
   card.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
   card.classList.add("on"); document.body.classList.add("card-on");
   if(map){requestAnimationFrame(()=>{map.invalidateSize(); map.setView([e.lat,e.lng],14,{animate:true});});}
@@ -213,7 +219,7 @@ function render(){
     const art=document.createElement("article");
     if(current===e.name) art.className="active";
     const loc=PLACES[placeOf(e)]?PLACES[placeOf(e)].label:"";
-    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${e.when} · ${loc} · ${e.venue}</div>`;
+    art.innerHTML=`<h3>${e.name}</h3><div class="meta">${typeMeta(e)} · ${e.when} · ${loc} · ${e.venue}</div>`;
     art.onclick=()=>showCard(e,art);
     m.on("click",ev=>{L.DomEvent.stopPropagation(ev); showCard(e,art);});
     list.appendChild(art);
