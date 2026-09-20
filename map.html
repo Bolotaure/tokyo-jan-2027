@@ -24,7 +24,7 @@ button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:
 #mapwrap{position:relative;height:44vh;min-height:230px;border-top:1px solid var(--line);background:#cfe0d4}
 #mapframe{position:absolute;inset:0;width:100%;height:100%;border:0;pointer-events:none}
 #pins{position:absolute;inset:0}
-#pins span{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transform:translate(-50%,-50%);padding:0}
+#pins span{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
 #pins span.on{width:16px;height:16px;z-index:2}
 a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 </style>
@@ -42,7 +42,7 @@ a.web{color:#c45c26;font-weight:600;font-size:12px;margin-right:10px}
 <div id="pins"></div>
 </div>
 <script>
-const W=139.38, E=140.06, S=35.28, N=35.76;
+let W=139.38, E=140.06, S=35.28, N=35.76;
 const DATA_A="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-a.json";
 const DATA_B="https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@main/events-b.json";
 const CATS={culture:{label:"Culture",color:"#8b3a2a"},walks:{label:"Walks",color:"#6b4e2e"},games:{label:"Games",color:"#3d4f99"},kids:{label:"Kids",color:"#b4532a"},skate:{label:"Skating",color:"#1f5f7a"},lights:{label:"Lights",color:"#2a6f6b"},animals:{label:"Animals",color:"#2f6b3a"},art:{label:"teamLab",color:"#5b3d8f"},shows:{label:"Shows",color:"#7a3058"},yoko:{label:"Yokohama",color:"#0b5f7a"},kama:{label:"Kamakura",color:"#7a4a1e"},museums:{label:"Museums",color:"#4a5d8f"}};
@@ -50,6 +50,7 @@ const DAYS=[{iso:"2027-01-05",label:"Tue 5"},{iso:"2027-01-06",label:"Wed 6"},{i
 let EVENTS=[], cat="all", selected=new Set(DAYS.map(d=>d.iso)), activeName=null;
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
+const frame=document.getElementById("mapframe");
 function addCat(key,label,color){
   const b=document.createElement("button"); b.textContent=label;
   if(key==="all"){b.style.background="#1c1915";b.style.color="#fff"}
@@ -74,6 +75,15 @@ DAYS.forEach(d=>{
 function paint(b,on){if(!b)return;b.style.background=on?"#1c1915":"#fff";b.style.color=on?"#fff":"#1c1915"}
 function syncDates(){paint(document.getElementById("allDates"),selected.size===DAYS.length);document.querySelectorAll("#dates [data-iso]").forEach(b=>paint(b,selected.has(b.dataset.iso)))}
 function overlaps(e){return DAYS.some(d=>selected.has(d.iso)&&e.start<=d.iso&&e.end>=d.iso)}
+function fit(points){
+  if(!points.length) return;
+  let minLat=points[0].lat, maxLat=points[0].lat, minLng=points[0].lng, maxLng=points[0].lng;
+  points.forEach(p=>{minLat=Math.min(minLat,p.lat);maxLat=Math.max(maxLat,p.lat);minLng=Math.min(minLng,p.lng);maxLng=Math.max(maxLng,p.lng)});
+  let pad=Math.max((maxLat-minLat)*0.35,(maxLng-minLng)*0.35,0.03);
+  if(points.length===1) pad=0.04;
+  S=minLat-pad; N=maxLat+pad; W=minLng-pad; E=maxLng+pad;
+  frame.src="https://www.openstreetmap.org/export/embed.html?bbox="+W+","+S+","+E+","+N+"&layer=mapnik";
+}
 function xy(e){return {left:((e.lng-W)/(E-W)*100)+"%", top:((N-e.lat)/(N-S)*100)+"%"}}
 function selectEvent(name){
   activeName = activeName===name ? null : name;
@@ -88,6 +98,8 @@ function render(){
   const pins=document.getElementById("pins"); pins.innerHTML="";
   const shown=EVENTS.filter(e=>(cat==="all"||e.cat===cat)&&overlaps(e));
   document.getElementById("count").textContent=shown.length+" places";
+  const focus=activeName?shown.filter(e=>e.name===activeName):shown;
+  fit(focus.length?focus:shown);
   shown.forEach(e=>{
     const q=encodeURIComponent(e.name);
     const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
