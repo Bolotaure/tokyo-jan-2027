@@ -24,5 +24,20 @@
     "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@ee1b688679a3c09461f93ed4feb49625d2486f39/events-d.json",
     "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@97bf4891d6f5d5c3868d4183ecc96345a503d617/events-e.json",
     "https://cdn.jsdelivr.net/gh/Bolotaure/tokyo-jan-2027@fb31ab01d19b98ebdb9dc2146905dc611f299122/events-f.json"
+  ],
+  "events": [
+    {
+      "cat": "immersive",
+      "name": "Harry Potter Studio Tour",
+      "when": "timed tickets",
+      "venue": "Kasugacho, Nerima (ex-Toshimaen)",
+      "lat": 35.7394,
+      "lng": 139.6394,
+      "start": "2027-01-05",
+      "end": "2027-01-11",
+      "place": "tokyo",
+      "desc": "Walk-through film sets: Great Hall, Diagon Alley, Platform 9¾ and the Forbidden Forest. About 3.5–4 hours, indoor. Book a timed slot on the official ticket page; January weekends sell out. Toshimaen Station is two minutes on foot. Price: adult from about ¥6,300; ages 4–11 from about ¥3,800; under 4 free.",
+      "url": "https://www.wbstudiotour.jp/tickets/"
+    }
   ]
 }
