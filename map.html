@@ -227,7 +227,7 @@ function fitVisible(){
   const shown=visibleEvents();
   if(!shown.length) return;
   map.invalidateSize();
-  map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.2));
+  map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.1));
 }
 function hideCard(){
   current=null; currentEv=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
