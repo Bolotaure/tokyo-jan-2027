@@ -31,9 +31,9 @@ body.card-on header{visibility:hidden}
 .type{font-weight:700}
 #mapwrap{flex:1 1 auto;min-height:160px;position:relative;background:#cfe0d4}
 #map{height:100%;width:100%;min-height:160px;background:#cfe0d4}
-#recenter{display:none;position:absolute;right:10px;bottom:10px;z-index:12;width:36px;height:36px;padding:0;border-radius:50%;background:#fff;border:1px solid #ccc;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+#recenter{display:none;position:absolute;top:10px;right:10px;z-index:12;width:36px;height:36px;padding:0;margin:0;border-radius:50%;background:#fff;border:1px solid #ccc;color:#1c1915;-webkit-appearance:none;appearance:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2)}
 body.card-on #recenter{display:flex}
-#recenter svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#recenter svg{width:16px;height:16px;display:block;fill:none;stroke:#1c1915;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter}
 .leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
 .pinwrap,.pinhit{background:transparent}
 .pinhit{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
@@ -71,7 +71,7 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div id="card"></div>
 </div>
 <div id="list"></div>
-<div id="mapwrap"><div id="map"></div><button id="recenter" type="button" title="Recenter" aria-label="Recenter"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
+<div id="mapwrap"><div id="map"></div><button id="recenter" type="button" title="Recenter" aria-label="Recenter"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/></svg></button></div>
 <script>
 const PAGE_HOST="https://raw.githubusercontent.com/Bolotaure/tokyo-jan-2027/main/pages/";
 const CATS={culture:{label:"Culture",color:"#7A1F1F"},walks:{label:"Walks",color:"#4D7C0F"},games:{label:"Games",color:"#1D4ED8"},kids:{label:"Kids",color:"#E85D04"},skate:{label:"Skating",color:"#0891B2"},lights:{label:"Lights",color:"#EAB308"},animals:{label:"Animals",color:"#15803D"},shows:{label:"Shows",color:"#BE185D"},museums:{label:"Museums",color:"#334155"},immersive:{label:"Immersive",color:"#7C3AED"},food:{label:"Food",color:"#DC2626"},views:{label:"Views",color:"#2563EB"}};
