@@ -29,7 +29,11 @@ body.card-on header{visibility:hidden}
 #list h3{margin:0 0 2px;font-size:14px}
 #list .meta{font-size:12px;color:var(--muted)}
 .type{font-weight:700}
-#map{flex:1 1 auto;min-height:160px;background:#cfe0d4}
+#mapwrap{flex:1 1 auto;min-height:160px;position:relative;background:#cfe0d4}
+#map{height:100%;width:100%;min-height:160px;background:#cfe0d4}
+#recenter{display:none;position:absolute;right:10px;bottom:10px;z-index:12;width:36px;height:36px;padding:0;border-radius:50%;background:#fff;border:1px solid #ccc;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+body.card-on #recenter{display:flex}
+#recenter svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .leaflet-container{height:100%;width:100%;overflow:hidden;position:relative;background:#ddd}
 .pinwrap,.pinhit{background:transparent}
 .pinhit{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
@@ -67,7 +71,7 @@ a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 <div id="card"></div>
 </div>
 <div id="list"></div>
-<div id="map"></div>
+<div id="mapwrap"><div id="map"></div><button id="recenter" type="button" title="Recenter" aria-label="Recenter"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
 <script>
 const PAGE_HOST="https://raw.githubusercontent.com/Bolotaure/tokyo-jan-2027/main/pages/";
 const CATS={culture:{label:"Culture",color:"#7A1F1F"},walks:{label:"Walks",color:"#4D7C0F"},games:{label:"Games",color:"#1D4ED8"},kids:{label:"Kids",color:"#E85D04"},skate:{label:"Skating",color:"#0891B2"},lights:{label:"Lights",color:"#EAB308"},animals:{label:"Animals",color:"#15803D"},shows:{label:"Shows",color:"#BE185D"},museums:{label:"Museums",color:"#334155"},immersive:{label:"Immersive",color:"#7C3AED"},food:{label:"Food",color:"#DC2626"},views:{label:"Views",color:"#2563EB"}};
@@ -78,7 +82,7 @@ const SORTS=[
   {id:"place",label:"Place",icon:'<svg viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.2"/></svg>'},
   {id:"name",label:"A–Z",icon:'<svg viewBox="0 0 24 24"><path d="M4 17l4-10 4 10M5.5 13h5M15 7h5l-5 10h5"/></svg>'}
 ];
-let PLACES={}, PLACE_KEYS=[], DAYS=[], EVENTS=[], places, cats, selected, map, layer, current=null, sortIdx=1;
+let PLACES={}, PLACE_KEYS=[], DAYS=[], EVENTS=[], places, cats, selected, map, layer, current=null, currentEv=null, sortIdx=1;
 const placeBox=document.getElementById("places");
 const filters=document.getElementById("filters");
 const dates=document.getElementById("dates");
@@ -226,7 +230,7 @@ function fitVisible(){
   map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.2));
 }
 function hideCard(){
-  current=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
+  current=null; currentEv=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
   pulsePins();
   if(map) map.invalidateSize();
@@ -234,7 +238,7 @@ function hideCard(){
 }
 function showCard(e, art){
   if(current===e.name){hideCard();return}
-  current=e.name;
+  current=e.name; currentEv=e;
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
   if(art){art.classList.add("active"); art.scrollIntoView({block:"nearest"})}
   const loc=PLACES[placeOf(e)]?PLACES[placeOf(e)].label:"";
@@ -245,6 +249,7 @@ function showCard(e, art){
   if(map){requestAnimationFrame(()=>{map.invalidateSize(); map.setView([e.lat,e.lng],14,{animate:true});});}
 }
 card.addEventListener("click",ev=>{if(ev.target.closest("a")) return; hideCard()});
+document.getElementById("recenter").onclick=ev=>{ev.stopPropagation(); if(!map||!currentEv) return; map.setView([currentEv.lat,currentEv.lng],14,{animate:true});};
 function render(){
   if(!layer) return;
   layer.clearLayers();
