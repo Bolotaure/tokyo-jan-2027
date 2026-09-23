@@ -34,6 +34,8 @@ body.card-on header{visibility:hidden}
 .pinwrap,.pinhit{background:transparent}
 .pinhit{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
 .pin{width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:none}
+@keyframes pinblink{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.45);opacity:.35}}
+.pin.sel{animation:pinblink .9s ease-in-out infinite;z-index:2}
 a.web{color:#c45c26;font-weight:600;font-size:13px;margin-right:12px}
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
 .leaflet-map-pane{z-index:1}.leaflet-tile-pane{z-index:2}.leaflet-overlay-pane{z-index:4}.leaflet-shadow-pane{z-index:5}.leaflet-marker-pane{z-index:6}.leaflet-tooltip-pane{z-index:7}.leaflet-popup-pane{z-index:8}
@@ -186,7 +188,13 @@ function prune(){
 function placeOf(e){return e.place||(e.cat==="yoko"?"yokohama":e.cat==="kama"?"kamakura":PLACE_KEYS[0]||"tokyo")}
 function typeOf(e){return CATS[e.cat]?e.cat:"culture"}
 function typeMeta(e){const t=typeOf(e);const c=CATS[t]||CATS.culture;return `<span class="type" style="color:${c.color}">${c.label}</span>`}
-function icon(c){return L.divIcon({className:"pinwrap",html:`<div class="pinhit"><div class="pin" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
+function icon(c, name, on){return L.divIcon({className:"pinwrap",html:`<div class="pinhit" data-name="${String(name).replace(/"/g,"")}"><div class="pin${on?" sel":""}" style="background:${c}"></div></div>`,iconSize:[44,44],iconAnchor:[22,22]})}
+function pulsePins(){
+  document.querySelectorAll(".pin").forEach(p=>{
+    const hit=p.parentElement;
+    p.classList.toggle("sel", !!(current && hit && hit.dataset.name===current));
+  });
+}
 function linksFor(e){
   const q=encodeURIComponent(e.name);
   const apple="https://maps.apple.com/?ll="+e.lat+","+e.lng+"&q="+q;
@@ -220,6 +228,7 @@ function fitVisible(){
 function hideCard(){
   current=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
   document.querySelectorAll("#list article").forEach(a=>a.classList.remove("active"));
+  pulsePins();
   if(map) map.invalidateSize();
   fitVisible();
 }
@@ -232,6 +241,7 @@ function showCard(e, art){
   card.innerHTML=`<h2>${e.name}</h2><div class="meta">${typeMeta(e)} · ${e.when} · ${loc} · ${e.venue}</div><p class="desc">${(e.desc||"").replace(/\n+/g," ")}</p><div class="links">${linksFor(e)}</div>`;
   card.querySelectorAll("a").forEach(a=>a.addEventListener("click",ev=>ev.stopPropagation()));
   card.classList.add("on"); document.body.classList.add("card-on");
+  pulsePins();
   if(map){requestAnimationFrame(()=>{map.invalidateSize(); map.setView([e.lat,e.lng],14,{animate:true});});}
 }
 card.addEventListener("click",ev=>{if(ev.target.closest("a")) return; hideCard()});
@@ -243,7 +253,7 @@ function render(){
   document.getElementById("count").textContent=shown.length+" places";
   shown.forEach(e=>{
     const t=typeOf(e);
-    const m=L.marker([e.lat,e.lng],{icon:icon((CATS[t]||CATS.culture).color),riseOnHover:true,keyboard:true}).addTo(layer);
+    const m=L.marker([e.lat,e.lng],{icon:icon((CATS[t]||CATS.culture).color,e.name,current===e.name),riseOnHover:true,keyboard:true}).addTo(layer);
     const art=document.createElement("article");
     if(current===e.name) art.className="active";
     const loc=PLACES[placeOf(e)]?PLACES[placeOf(e)].label:"";
@@ -253,6 +263,7 @@ function render(){
     list.appendChild(art);
   });
   if(shown.length) fitVisible();
+  pulsePins();
 }
 function startMap(){
   map=L.map("map",{tap:true,tapTolerance:28,bounceAtZoomLimits:false}).setView([35.55,139.7],9);
