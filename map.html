@@ -227,7 +227,9 @@ function fitVisible(){
   const shown=visibleEvents();
   if(!shown.length) return;
   map.invalidateSize();
-  map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.1));
+  const sz=map.getSize();
+  if(sz.x<40||sz.y<40) return;
+  map.fitBounds(L.latLngBounds(shown.map(e=>[e.lat,e.lng])).pad(0.1),{animate:false,maxZoom:12});
 }
 function hideCard(){
   current=null; currentEv=null; card.classList.remove("on"); card.innerHTML=""; document.body.classList.remove("card-on");
@@ -271,11 +273,20 @@ function render(){
   pulsePins();
 }
 function startMap(){
-  map=L.map("map",{tap:true,tapTolerance:28,bounceAtZoomLimits:false}).setView([35.55,139.7],9);
+  map=L.map("map",{tap:true,tapTolerance:28,bounceAtZoomLimits:false}).setView([35.68,139.76],10);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:""}).addTo(map);
   layer=L.layerGroup().addTo(map);
-  setTimeout(()=>map.invalidateSize(),250);
-  if(EVENTS.length) render();
+  function boot(){
+    map.invalidateSize();
+    if(EVENTS.length) render();
+    else fitVisible();
+  }
+  map.whenReady(()=>{
+    boot();
+    setTimeout(boot,200);
+    setTimeout(boot,600);
+  });
+  window.addEventListener("resize",()=>{if(!map||current) return; map.invalidateSize(); fitVisible();});
 }
 function applyPage(cfg, lists){
   document.getElementById("kicker").textContent=cfg.kicker||"";
